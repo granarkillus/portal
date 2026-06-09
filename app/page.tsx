@@ -31,16 +31,9 @@ export default function OfficerLoginPage() {
     if (!email || !password) return;
     setLoading(true);
     setError("");
-
     const supabase = getSupabase();
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (authError) {
-      setError("Invalid email or password. Please try again.");
-      setLoading(false);
-      return;
-    }
-
+    if (authError) { setError("Invalid email or password. Please try again."); setLoading(false); return; }
     window.location.href = "/dashboard";
   };
 
@@ -48,16 +41,9 @@ export default function OfficerLoginPage() {
     if (!email || !password || !fullName) return;
     setLoading(true);
     setError("");
-
     const supabase = getSupabase();
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
-
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
-    }
-
+    if (signUpError) { setError(signUpError.message); setLoading(false); return; }
     if (data.user) {
       await supabase.from("officer_profiles").insert([{
         id: data.user.id,
@@ -66,7 +52,6 @@ export default function OfficerLoginPage() {
         post: post || null,
       }]);
     }
-
     window.location.href = "/dashboard";
   };
 
@@ -74,18 +59,11 @@ export default function OfficerLoginPage() {
     if (!email) { setError("Enter your email address first."); return; }
     setLoading(true);
     setError("");
-
     const supabase = getSupabase();
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
-
-    if (resetError) {
-      setError("Failed to send reset email. Please try again.");
-      setLoading(false);
-      return;
-    }
-
+    if (resetError) { setError("Failed to send reset email. Please try again."); setLoading(false); return; }
     setResetSent(true);
     setLoading(false);
   };
@@ -105,7 +83,6 @@ export default function OfficerLoginPage() {
         </div>
 
         <div style={{ padding: "1.75rem 2rem" }}>
-
           {resetSent ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
@@ -140,38 +117,53 @@ export default function OfficerLoginPage() {
               <button
                 onClick={mode === "login" ? handleLogin : mode === "register" ? handleRegister : handleReset}
                 disabled={loading}
-                style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer", marginBottom: "1rem" }}
+                style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer", marginBottom: "0.75rem" }}
               >
                 {loading ? "Please wait..." : mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : "Send Reset Email"}
               </button>
 
+              {/* Continue without account */}
+              {mode === "login" && (
+                <a
+                  href="/forms"
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                    padding: "0.65rem 1rem", borderRadius: 4, marginBottom: "1rem",
+                    border: `1.5px solid ${BORDER}`, background: SOFT_BG,
+                    color: TEXT, fontSize: "0.85rem", fontWeight: 600,
+                    textDecoration: "none", textAlign: "center" as const,
+                  }}
+                >
+                  Continue without account
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </a>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center" }}>
                 {mode === "login" && (
                   <>
-                    <button onClick={() => { setMode("register"); setError(""); }} style={linkStyle}>
-                      Don't have an account? Register
-                    </button>
-                    <button onClick={() => { setMode("forgot"); setError(""); }} style={linkStyle}>
-                      Forgot password?
-                    </button>
+                    <button onClick={() => { setMode("register"); setError(""); }} style={linkStyle}>Don't have an account? Register</button>
+                    <button onClick={() => { setMode("forgot"); setError(""); }} style={linkStyle}>Forgot password?</button>
                   </>
                 )}
                 {mode === "register" && (
-                  <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>
-                    Already have an account? Sign in
-                  </button>
+                  <>
+                    <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>Already have an account? Sign in</button>
+                    <a href="/forms" style={{ ...linkStyle, textDecoration: "underline" as const }}>Continue without account</a>
+                  </>
                 )}
                 {mode === "forgot" && (
-                  <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>
-                    Back to login
-                  </button>
+                  <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>Back to login</button>
                 )}
               </div>
 
-              <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "1.25rem", paddingTop: "1rem", fontSize: "0.75rem", color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
-                You can also use all forms without an account.<br />
-                Registration gives you pre-filled forms and submission history.
-              </div>
+              {mode === "login" && (
+                <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "1.25rem", paddingTop: "1rem", fontSize: "0.72rem", color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
+                  Registration gives you pre-filled forms, submission history, and disciplinary notice alerts.
+                </div>
+              )}
             </>
           )}
         </div>
