@@ -92,78 +92,69 @@ export default function OfficerLoginPage() {
               <div style={{ fontSize: "0.82rem", color: MUTED, marginBottom: "1.5rem" }}>Check your inbox for a password reset link.</div>
               <button onClick={() => { setMode("login"); setResetSent(false); }} style={btnStyle(NAVY)}>Back to Login</button>
             </div>
-          ) : (
+          ) : mode === "login" ? (
             <>
-              {mode === "register" && (
-                <>
-                  <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Your full legal name" required />
-                  <Field label="Employee Number (optional)" value={employeeNumber} onChange={setEmployeeNumber} placeholder="e.g. 12345" />
-                  <Field label="Assigned Post (optional)" value={post} onChange={setPost} placeholder="e.g. Greenway Walk" />
-                </>
-              )}
-
               <Field label="Email Address" value={email} onChange={setEmail} placeholder="your@email.com" type="email" required />
+              <Field label="Password" value={password} onChange={setPassword} placeholder="Enter your password" type="password" required onEnter={handleLogin} />
 
-              {mode !== "forgot" && (
-                <Field label="Password" value={password} onChange={setPassword} placeholder={mode === "register" ? "Min. 8 characters" : "Enter your password"} type="password" required />
-              )}
+              {error && <ErrorBox message={error} />}
 
-              {error && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4, padding: "0.65rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={mode === "login" ? handleLogin : mode === "register" ? handleRegister : handleReset}
-                disabled={loading}
-                style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer", marginBottom: "0.75rem" }}
-              >
-                {loading ? "Please wait..." : mode === "login" ? "Sign In" : mode === "register" ? "Create Account" : "Send Reset Email"}
-              </button>
-
-              {/* Continue without account */}
-              {mode === "login" && (
-                <a
-                  href="/forms"
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                    padding: "0.65rem 1rem", borderRadius: 4, marginBottom: "1rem",
-                    border: `1.5px solid ${BORDER}`, background: SOFT_BG,
-                    color: TEXT, fontSize: "0.85rem", fontWeight: 600,
-                    textDecoration: "none", textAlign: "center" as const,
-                  }}
-                >
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <button onClick={handleLogin} disabled={loading} style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer" }}>
+                  {loading ? "Please wait..." : "Sign In"}
+                </button>
+                <button onClick={() => { setMode("register"); setError(""); }} style={outlineBtn}>
+                  Create Account
+                </button>
+                <a href="/forms" style={{ ...outlineBtn, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none", background: SOFT_BG, borderColor: BORDER, color: MUTED }}>
                   Continue without account
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </a>
-              )}
-
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", alignItems: "center" }}>
-                {mode === "login" && (
-                  <>
-                    <button onClick={() => { setMode("register"); setError(""); }} style={linkStyle}>Don't have an account? Register</button>
-                    <button onClick={() => { setMode("forgot"); setError(""); }} style={linkStyle}>Forgot password?</button>
-                  </>
-                )}
-                {mode === "register" && (
-                  <>
-                    <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>Already have an account? Sign in</button>
-                    <a href="/forms" style={{ ...linkStyle, textDecoration: "underline" as const }}>Continue without account</a>
-                  </>
-                )}
-                {mode === "forgot" && (
-                  <button onClick={() => { setMode("login"); setError(""); }} style={linkStyle}>Back to login</button>
-                )}
               </div>
 
-              {mode === "login" && (
-                <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "1.25rem", paddingTop: "1rem", fontSize: "0.72rem", color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
-                  Registration gives you pre-filled forms, submission history, and disciplinary notice alerts.
-                </div>
-              )}
+              <div style={{ textAlign: "center", marginTop: "1rem" }}>
+                <button onClick={() => { setMode("forgot"); setError(""); }} style={linkStyle}>Forgot password?</button>
+              </div>
+
+              <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "1.25rem", paddingTop: "1rem", fontSize: "0.72rem", color: MUTED, textAlign: "center", lineHeight: 1.5 }}>
+                Registration gives you pre-filled forms, submission history, and disciplinary notice alerts.
+              </div>
+            </>
+          ) : mode === "register" ? (
+            <>
+              <Field label="Full Name" value={fullName} onChange={setFullName} placeholder="Your full legal name" required />
+              <Field label="Employee Number (optional)" value={employeeNumber} onChange={setEmployeeNumber} placeholder="e.g. 12345" />
+              <Field label="Assigned Post (optional)" value={post} onChange={setPost} placeholder="e.g. Greenway Walk" />
+              <Field label="Email Address" value={email} onChange={setEmail} placeholder="your@email.com" type="email" required />
+              <Field label="Password" value={password} onChange={setPassword} placeholder="Min. 8 characters" type="password" required />
+
+              {error && <ErrorBox message={error} />}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <button onClick={handleRegister} disabled={loading} style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer" }}>
+                  {loading ? "Please wait..." : "Create Account"}
+                </button>
+                <button onClick={() => { setMode("login"); setError(""); }} style={outlineBtn}>
+                  Already have an account? Sign In
+                </button>
+                <a href="/forms" style={{ ...outlineBtn, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, textDecoration: "none", background: SOFT_BG, borderColor: BORDER, color: MUTED }}>
+                  Continue without account
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="Email Address" value={email} onChange={setEmail} placeholder="your@email.com" type="email" required />
+              {error && <ErrorBox message={error} />}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+                <button onClick={handleReset} disabled={loading} style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer" }}>
+                  {loading ? "Please wait..." : "Send Reset Email"}
+                </button>
+                <button onClick={() => { setMode("login"); setError(""); }} style={outlineBtn}>
+                  Back to Login
+                </button>
+              </div>
             </>
           )}
         </div>
@@ -172,23 +163,44 @@ export default function OfficerLoginPage() {
   );
 }
 
-function Field({ label, value, onChange, placeholder, type = "text", required: req }: {
+function Field({ label, value, onChange, placeholder, type = "text", required: req, onEnter }: {
   label: string; value: string; onChange: (v: string) => void;
-  placeholder?: string; type?: string; required?: boolean;
+  placeholder?: string; type?: string; required?: boolean; onEnter?: () => void;
 }) {
   return (
     <div style={{ marginBottom: "1rem" }}>
       <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "#374151", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
         {label}{req && <span style={{ color: "#b3261e", marginLeft: 2 }}>*</span>}
       </div>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} style={{ width: "100%", boxSizing: "border-box", padding: "0.6rem 0.75rem", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.88rem", color: "#1a1a2e", background: "#fafbfc", outline: "none", fontFamily: "inherit" }} />
+      <input
+        type={type} value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
+        placeholder={placeholder}
+        style={{ width: "100%", boxSizing: "border-box", padding: "0.6rem 0.75rem", border: "1px solid #d1d5db", borderRadius: 4, fontSize: "0.88rem", color: "#1a1a2e", background: "#fafbfc", outline: "none", fontFamily: "inherit" }}
+      />
+    </div>
+  );
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 4, padding: "0.65rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
+      {message}
     </div>
   );
 }
 
 function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 4, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
+  return { background: bg, color: "#ffffff", border: "none", borderRadius: 4, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%", textAlign: "center" };
 }
+
+const outlineBtn: React.CSSProperties = {
+  background: WHITE, color: "#1f4e79", border: "1.5px solid #1f4e79", borderRadius: 4,
+  padding: "0.65rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em",
+  cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%",
+  textAlign: "center",
+};
 
 const linkStyle: React.CSSProperties = {
   background: "none", border: "none", color: "#6b7280", fontSize: "0.78rem",
