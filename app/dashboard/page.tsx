@@ -38,6 +38,8 @@ interface CallOff {
   notice_type: string;
   reason: string;
   submitted_at: string;
+  excusal_status: string | null;
+  document_url: string | null;
 }
 
 interface DARSubmission {
@@ -64,6 +66,9 @@ export default function OfficerDashboard() {
   const [disciplinary, setDisciplinary] = useState<DisciplinaryRecord[]>([]);
   const [pendingAck, setPendingAck] = useState<DisciplinaryRecord[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<Record<string, string>>({});
 
   const formatDate = (iso: string) => {
     if (!iso) return "";
@@ -92,7 +97,7 @@ export default function OfficerDashboard() {
       if (name) {
         const [toData, coData, darData, discData] = await Promise.all([
           supabase.from("time_off_requests").select("id, absence_type, dates_requested, status, submitted_at").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
-          supabase.from("calloff_submissions").select("id, shift_date, notice_type, reason, submitted_at").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
+          supabase.from("calloff_submissions").select("id, shift_date, notice_type, reason, submitted_at, excusal_status, document_url").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
           supabase.from("dar_submissions").select("id, date, shift_start, submitted_at").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
           supabase.from("disciplinary_records").select("id, infraction, action_type, notice_date, signature").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(10),
         ]);
@@ -114,6 +119,44 @@ export default function OfficerDashboard() {
     window.location.href = "/";
   };
 
+  // Lets an officer attach a doctor's note / documentation to a call-off
+  // after the fact, when none was provided at submission time.
+  const handleDocUpload = async (record: CallOff, file: File) => {
+    setUploadingId(record.id);
+    setUploadError((prev) => ({ ...prev, [record.id]: "" }));
+
+    const supabase = getSupabase();
+    const fileExt = file.name.split(".").pop();
+    const fileName = `calloff-${record.id}-${Date.now()}.${fileExt}`;
+
+    const { data: uploadData, error: uploadErr } = await supabase.storage
+      .from("calloff-documents")
+      .upload(fileName, file, { cacheControl: "3600", upsert: false });
+
+    if (uploadErr || !uploadData) {
+      setUploadError((prev) => ({ ...prev, [record.id]: "Upload failed. Please try again." }));
+      setUploadingId(null);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from("calloff-documents").getPublicUrl(fileName);
+    const docUrl = urlData?.publicUrl || null;
+
+    const { error: dbErr } = await supabase
+      .from("calloff_submissions")
+      .update({ document_url: docUrl })
+      .eq("id", record.id);
+
+    if (dbErr) {
+      setUploadError((prev) => ({ ...prev, [record.id]: "Upload succeeded but saving the record failed. Please try again." }));
+      setUploadingId(null);
+      return;
+    }
+
+    setCallOffs((prev) => prev.map((c) => c.id === record.id ? { ...c, document_url: docUrl } : c));
+    setUploadingId(null);
+  };
+
   const encodedName = encodeURIComponent(profile?.full_name || "");
   const encodedEmpNum = encodeURIComponent(profile?.employee_number || "");
 
@@ -131,6 +174,16 @@ export default function OfficerDashboard() {
     };
     const s = map[status] || map.pending;
     return <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, textTransform: "uppercase", letterSpacing: "0.04em" }}>{status}</span>;
+  };
+
+  const excusalBadge = (excusalStatus: string | null) => {
+    const map: Record<string, { bg: string; color: string; border: string; label: string }> = {
+      excused: { bg: "#e8f5e9", color: GREEN, border: "#a5d6a7", label: "Excused" },
+      unexcused: { bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5", label: "Unexcused" },
+      pending: { bg: "#fff3cd", color: "#92400e", border: "#fcd34d", label: "Pending Review" },
+    };
+    const s = map[excusalStatus || "pending"] || map.pending;
+    return <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{s.label}</span>;
   };
 
   return (
@@ -257,8 +310,40 @@ export default function OfficerDashboard() {
               ) : (
                 callOffs.map((r, i) => (
                   <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < callOffs.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{formatDate(r.shift_date)} — {r.reason}</div>
-                    <div style={{ fontSize: "0.72rem", color: MUTED }}>{r.notice_type}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem" }}>
+                      <div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{formatDate(r.shift_date)} — {r.reason}</div>
+                        <div style={{ fontSize: "0.72rem", color: MUTED }}>{r.notice_type}</div>
+                      </div>
+                      {excusalBadge(r.excusal_status)}
+                    </div>
+
+                    {r.document_url ? (
+                      <div style={{ fontSize: "0.7rem", color: MUTED, marginTop: "0.5rem", display: "flex", alignItems: "center", gap: 4 }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        Documentation attached
+                      </div>
+                    ) : (
+                      <div style={{ marginTop: "0.5rem" }}>
+                        <input
+                          id={`doc-upload-${r.id}`}
+                          type="file"
+                          accept=".jpg,.jpeg,.png,.pdf"
+                          style={{ display: "none" }}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleDocUpload(r, f); }}
+                        />
+                        <button
+                          onClick={() => document.getElementById(`doc-upload-${r.id}`)?.click()}
+                          disabled={uploadingId === r.id}
+                          style={{ background: "none", border: `1px solid ${BORDER}`, color: NAVY, borderRadius: 4, padding: "0.3rem 0.65rem", fontSize: "0.7rem", fontWeight: 600, cursor: uploadingId === r.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploadingId === r.id ? 0.6 : 1 }}
+                        >
+                          {uploadingId === r.id ? "Uploading..." : "+ Add Documentation"}
+                        </button>
+                        {uploadError[r.id] && (
+                          <div style={{ fontSize: "0.68rem", color: "#b91c1c", marginTop: 4 }}>{uploadError[r.id]}</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
