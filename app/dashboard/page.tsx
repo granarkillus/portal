@@ -22,6 +22,8 @@ interface Profile {
   full_name: string;
   employee_number: string;
   post: string;
+  officer_id: string | null;
+  verified: boolean;
 }
 
 interface TimeOffRequest {
@@ -66,6 +68,7 @@ export default function OfficerDashboard() {
   const [disciplinary, setDisciplinary] = useState<DisciplinaryRecord[]>([]);
   const [pendingAck, setPendingAck] = useState<DisciplinaryRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
 
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<Record<string, string>>({});
@@ -92,14 +95,18 @@ export default function OfficerDashboard() {
 
       if (profileData) setProfile(profileData);
 
-      const name = profileData?.full_name || "";
+      // History is matched by the officer this account was approved as (not the
+      // typed name), so every spelling of their name is included and nobody can
+      // see someone else's records by registering under their name.
+      const officerId = profileData?.verified ? profileData?.officer_id : null;
+      if (profileData && !officerId) setAwaitingApproval(true);
 
-      if (name) {
+      if (officerId) {
         const [toData, coData, darData, discData] = await Promise.all([
-          supabase.from("time_off_requests").select("id, absence_type, dates_requested, status, submitted_at").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
-          supabase.from("calloff_submissions").select("id, shift_date, notice_type, reason, submitted_at, excusal_status, document_url").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
-          supabase.from("dar_submissions").select("id, date, shift_start, submitted_at").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(5),
-          supabase.from("disciplinary_records").select("id, infraction, action_type, notice_date, signature").ilike("officer_name", name).order("submitted_at", { ascending: false }).limit(10),
+          supabase.from("time_off_requests").select("id, absence_type, dates_requested, status, submitted_at").eq("officer_id", officerId).order("submitted_at", { ascending: false }).limit(5),
+          supabase.from("calloff_submissions").select("id, shift_date, notice_type, reason, submitted_at, excusal_status, document_url").eq("officer_id", officerId).order("submitted_at", { ascending: false }).limit(5),
+          supabase.from("dar_submissions").select("id, date, shift_start, submitted_at").eq("officer_id", officerId).order("submitted_at", { ascending: false }).limit(5),
+          supabase.from("disciplinary_records").select("id, infraction, action_type, notice_date, signature").eq("officer_id", officerId).order("submitted_at", { ascending: false }).limit(10),
         ]);
 
         setTimeOff(toData.data || []);
@@ -139,15 +146,11 @@ export default function OfficerDashboard() {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("calloff-documents").getPublicUrl(fileName);
-    const docUrl = urlData?.publicUrl || null;
+    // Documents are private: store the file's path; supervisors open it with a signed link.
+    const docUrl = fileName;
+    const { data: attached, error: dbErr } = await supabase.rpc("attach_calloff_document", { p_id: record.id, p_path: fileName });
 
-    const { error: dbErr } = await supabase
-      .from("calloff_submissions")
-      .update({ document_url: docUrl })
-      .eq("id", record.id);
-
-    if (dbErr) {
+    if (dbErr || attached !== true) {
       setUploadError((prev) => ({ ...prev, [record.id]: "Upload succeeded but saving the record failed. Please try again." }));
       setUploadingId(null);
       return;
@@ -206,6 +209,15 @@ export default function OfficerDashboard() {
       </div>
 
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1rem" }}>
+
+        {awaitingApproval && (
+          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderLeft: "4px solid #d97706", borderRadius: 4, padding: "1rem 1.5rem", marginBottom: "1.5rem" }}>
+            <div style={{ fontWeight: 700, color: "#92400e", fontSize: "0.92rem", marginBottom: 4 }}>Account awaiting supervisor approval</div>
+            <div style={{ fontSize: "0.78rem", color: "#78350f", lineHeight: 1.5 }}>
+              You can submit forms now. Your past call-offs, DARs and requests will show here once a supervisor confirms your account.
+            </div>
+          </div>
+        )}
 
         {/* Pending acknowledgement alert */}
         {pendingAck.length > 0 && (
