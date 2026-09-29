@@ -58,7 +58,8 @@ export default function ScanPage() {
     setExtracted(null);
 
     try {
-      const response = await fetch("/api/scan", {
+      // The scanner runs on the dar.xing.wtf project, which holds the Anthropic key.
+      const response = await fetch("https://dar.xing.wtf/api/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image, mediaType: imageType }),
