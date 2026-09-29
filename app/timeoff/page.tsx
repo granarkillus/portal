@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getPublicSupabase } from "@/lib/supabase";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
+import { buildTimeOffFormDocument, TimeOffRequest } from "./requests/timeoff-form-template";
 
 const NAVY = "#1a4480";
 const SOFT_BG = "#f2f5fa";
@@ -35,12 +36,6 @@ export default function AUSTimeOffForm() {
 
   const setAbsence = (val: string) => () =>
     setForm((f) => ({ ...f, absenceType: f.absenceType === val ? "" : val }));
-
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const [y, m, d] = iso.split("-");
-    return `${m}/${d}/${y}`;
-  };
 
   // Show what's missing (in red) once they've tried to submit.
   const [triedSubmit, setTriedSubmit] = useState(false);
@@ -89,110 +84,32 @@ export default function AUSTimeOffForm() {
     setSubmitting(false);
   };
 
+  // Prints the officer's copy on the official Allied Universal Time-off
+  // Request Form (the same template supervisors print from Requests). A new
+  // request has no decision yet, so the manager section prints blank.
   const generatePDF = () => {
-    const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<title>AUS Time-off Request – ${form.employeeName || "Employee"}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  @page { size: letter; margin: 0.45in 0.5in; }
-  body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #fff; color: #1a1a2e; font-size: 9.5pt; width: 100%; }
-  .header { background: #1f4e79; padding: 10px 18px; display: flex; justify-content: space-between; align-items: center; }
-  .brand { color: #fff; font-size: 11pt; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
-  .brand span { font-weight: 300; }
-  .tagline { color: rgba(255,255,255,0.6); font-size: 7pt; margin-top: 1px; }
-  .header-right { text-align: right; }
-  .header-right .title { color: #fff; font-size: 10.5pt; font-weight: 700; }
-  .header-right .subtitle { color: rgba(255,255,255,0.75); font-size: 8pt; }
-  .section-bar { background: #1a1a2e; color: #fff; padding: 4px 18px; font-size: 7pt; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; margin-top: 10px; }
-  .body { padding: 8px 18px 0; }
-  .field { margin-bottom: 7px; }
-  .field-label { font-size: 6.5pt; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 1px; }
-  .field-value { border-bottom: 1pt solid #1f4e79; padding: 1px 0 2px 2px; font-size: 9.5pt; min-height: 16px; color: #1a1a2e; }
-  .row { display: flex; gap: 16px; }
-  .row .field { flex: 1; }
-  .absence-row { display: flex; flex-wrap: wrap; gap: 5px 18px; margin: 6px 0 8px; }
-  .checkbox-item { display: flex; align-items: center; gap: 5px; font-size: 8.5pt; }
-  .box { width: 11px; height: 11px; border: 1pt solid #1f4e79; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; background: #fff; }
-  .box.checked { background: #1f4e79; }
-  .box.checked::after { content: '✓'; color: #fff; font-size: 7.5pt; line-height: 1; }
-  .notice { background: #f4f6f9; border: 1px solid #d1d5db; border-left: 3px solid #1f4e79; border-radius: 2px; padding: 5px 10px; font-size: 7.5pt; font-style: italic; font-weight: 600; color: #1a1a2e; margin: 7px 0; }
-  .sig-row { display: flex; gap: 16px; margin-top: 10px; }
-  .sig-block { flex: 1; }
-  .blank-line { border-bottom: 1pt solid #1a1a2e; min-height: 18px; padding-bottom: 1px; font-size: 9.5pt; margin-bottom: 2px; }
-  .sig-label { font-size: 6.5pt; color: #6b7280; font-style: italic; }
-  .manager-section { padding: 8px 18px 0; }
-  .approval-note { background: #f4f6f9; border: 1px solid #d1d5db; border-left: 3px solid #a06a00; border-radius: 2px; padding: 4px 10px; font-size: 7.5pt; color: #6b4c00; font-weight: 600; margin: 6px 0 8px; }
-  .check-row { display: flex; gap: 24px; margin: 5px 0; }
-  .footer { border-top: 1px solid #d1d5db; margin-top: 10px; padding: 5px 18px 0; font-size: 7pt; color: #6b7280; text-align: center; }
-  .divider { border: none; border-top: 1.5px dashed #d1d5db; margin: 10px 18px; }
-</style>
-</head>
-<body>
-<div class="header">
-  <div>
-    <div class="brand">Allied<span>Universal</span><sup style="font-size:5.5pt;font-weight:300">™</sup></div>
-    <div class="tagline">There for you.</div>
-  </div>
-  <div class="header-right">
-    <div class="title">Allied Universal Security Services</div>
-    <div class="subtitle">Time-off Request Form</div>
-  </div>
-</div>
-<div class="section-bar">Time Off Information — Employee</div>
-<div class="body">
-  <div class="row">
-    <div class="field" style="flex:2"><div class="field-label">Employee Name</div><div class="field-value">${form.employeeName || ""}</div></div>
-    <div class="field" style="flex:1"><div class="field-label">Employee Number</div><div class="field-value">${form.employeeNumber || ""}</div></div>
-    <div class="field" style="flex:1"><div class="field-label">Account</div><div class="field-value">${form.account || ""}</div></div>
-  </div>
-  <div class="field"><div class="field-label">Manager</div><div class="field-value">${form.manager || ""}</div></div>
-  <div class="field-label" style="margin-top:6px;">Type of Absence Requested</div>
-  <div class="absence-row">
-    <div class="checkbox-item"><div class="box ${form.absenceType === "Vacation" ? "checked" : ""}"></div><span>Vacation</span></div>
-    <div class="checkbox-item"><div class="box ${form.absenceType === "Sick (If Applicable)" ? "checked" : ""}"></div><span>Sick (If Applicable)</span></div>
-    <div class="checkbox-item"><div class="box ${form.absenceType === "Military (Must provide documentation)" ? "checked" : ""}"></div><span>Military (Must provide documentation)</span></div>
-    <div class="checkbox-item"><div class="box ${form.absenceType === "Other" ? "checked" : ""}"></div><span>Other: ${form.absenceType === "Other" ? form.otherType : "___________"}</span></div>
-  </div>
-  <div class="row">
-    <div class="field" style="flex:1"><div class="field-label">Reason For Absence</div><div class="field-value">${form.reasonForAbsence || ""}</div></div>
-    <div class="field" style="flex:1"><div class="field-label">Day(s) and Date(s) of Absence</div><div class="field-value">${form.daysAndDates || ""}</div></div>
-  </div>
-  <div class="notice">All requests for time off must be submitted two (2) weeks in advance.</div>
-  <div class="sig-row">
-    <div class="sig-block"><div class="blank-line">${form.employeeSignature || ""}</div><div class="sig-label">Employee Signature</div></div>
-    <div class="sig-block" style="max-width:160px;"><div class="blank-line">${formatDate(form.employeeDate)}</div><div class="sig-label">Date</div></div>
-  </div>
-</div>
-<hr class="divider"/>
-<div class="section-bar">Manager / Scheduling Supervisor Approval</div>
-<div class="manager-section">
-  <div class="row" style="margin-top:6px;align-items:flex-end;">
-    <div class="field" style="max-width:220px;"><div class="field-label">Hours Available per Vacation Look-Up</div><div class="blank-line"></div></div>
-    <div style="flex:1"></div>
-  </div>
-  <div class="check-row" style="margin-top:8px;">
-    <div class="checkbox-item"><div class="box"></div><span>Time Off / Payout Approved</span></div>
-    <div class="checkbox-item"><div class="box"></div><span>Time Off / Payout Rejected</span></div>
-  </div>
-  <div class="field" style="margin-top:6px;"><div class="field-label">If Rejected, Why:</div><div class="blank-line"></div></div>
-  <div class="field-label" style="margin-top:6px;">For Time Off Approvals</div>
-  <div style="margin-top:4px;">
-    <div class="checkbox-item" style="margin-bottom:4px;"><div class="box"></div><span>Employee and vacation time entered into weekly schedule</span></div>
-    <div class="checkbox-item"><div class="box"></div><span>Employee(s) covering shift(s) entered into weekly schedule</span></div>
-  </div>
-  <div class="approval-note">All shifts should be filled using employees with less than 40 scheduled hours first, as to not incur overtime.</div>
-  <div class="sig-row">
-    <div class="sig-block"><div class="blank-line"></div><div class="sig-label">Manager Signature</div></div>
-    <div class="sig-block" style="max-width:160px;"><div class="blank-line"></div><div class="sig-label">Date</div></div>
-  </div>
-</div>
-<div class="footer">Please keep all completed forms on file for audit purposes. &nbsp;·&nbsp; UPDATED 4/19 &nbsp;·&nbsp; Original – Personnel File &nbsp;·&nbsp; Copy – Employee &nbsp;·&nbsp; Copy – Supervisor</div>
-</body>
-</html>`;
-
+    const request: TimeOffRequest = {
+      id: "",
+      officer_name: form.employeeName,
+      employee_number: form.employeeNumber,
+      account: form.account,
+      manager: form.manager,
+      absence_type: form.absenceType === "Other" ? `Other: ${form.otherType}` : form.absenceType,
+      reason: form.reasonForAbsence,
+      dates_requested: form.daysAndDates,
+      employee_signature: form.employeeSignature,
+      employee_date: form.employeeDate,
+      status: "pending",
+      hours_available: null,
+      approval_decision: null,
+      rejection_reason: null,
+      vacation_entered: null,
+      covering_entered: null,
+      manager_signature: null,
+      manager_date: null,
+      submitted_at: new Date().toISOString(),
+    };
+    const html = buildTimeOffFormDocument(request);
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
