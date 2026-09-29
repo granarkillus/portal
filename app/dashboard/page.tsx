@@ -164,9 +164,9 @@ export default function OfficerDashboard() {
   const encodedEmpNum = encodeURIComponent(profile?.employee_number || "");
 
   const formLinks = [
-    { label: "Submit Daily Activity Report", href: `https://dar.xing.wtf`, icon: "📋" },
-    { label: "Request Time Off", href: `https://timeoffrequest.xing.wtf`, icon: "📅" },
-    { label: "Submit Call-Off Notice", href: `https://calloff.xing.wtf`, icon: "📞" },
+    { label: "Submit Daily Activity Report", href: `/dar`, icon: "📋" },
+    { label: "Request Time Off", href: `/timeoff`, icon: "📅" },
+    { label: "Submit Call-Off Notice", href: `/calloff`, icon: "📞" },
   ];
 
   const statusBadge = (status: string) => {
@@ -231,7 +231,7 @@ export default function OfficerDashboard() {
               </div>
             </div>
             <a
-              href={`https://disciplinaryformresponse.xing.wtf/respond?id=${pendingAck[0].id}`}
+              href={`/writeup/respond?id=${pendingAck[0].id}`}
               style={{ background: "#b91c1c", color: WHITE, borderRadius: 12, padding: "0.5rem 1.25rem", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}
             >
               Review Now
@@ -287,7 +287,7 @@ export default function OfficerDashboard() {
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Time-Off Requests</span>
-              <a href="https://timeoffrequest.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
+              <a href="/timeoff" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
@@ -312,7 +312,7 @@ export default function OfficerDashboard() {
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Call-Off History</span>
-              <a href="https://calloff.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
+              <a href="/calloff" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
@@ -366,7 +366,7 @@ export default function OfficerDashboard() {
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recent DARs</span>
-              <a href="https://dar.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
+              <a href="/dar" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
@@ -404,7 +404,7 @@ export default function OfficerDashboard() {
                     {r.signature ? (
                       <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#e8f5e9", color: GREEN, border: "1px solid #a5d6a7", textTransform: "uppercase" }}>Acknowledged</span>
                     ) : (
-                      <a href={`https://disciplinaryformresponse.xing.wtf/respond?id=${r.id}`} style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#fef2f2", color: "#b91c1c", border: "1px solid #fca5a5", textTransform: "uppercase", textDecoration: "none" }}>
+                      <a href={`/writeup/respond?id=${r.id}`} style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#fef2f2", color: "#b91c1c", border: "1px solid #fca5a5", textTransform: "uppercase", textDecoration: "none" }}>
                         Respond
                       </a>
                     )}

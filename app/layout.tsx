@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: "AUS Officer Portal",
+  title: "Allied Universal · Washington University",
   description: 'Allied Universal Security Services Officer Portal',
   generator: 'next',
   icons: { icon: '/favicon.svg', apple: '/apple-touch-icon.png' },

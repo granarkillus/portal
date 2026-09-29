@@ -15,7 +15,7 @@ const TASKS = [
   {
     label: "Call off a shift",
     description: "Can't make it in? Your supervisor is emailed right away.",
-    href: "https://calloff.xing.wtf",
+    href: "/calloff",
     icon: "🤒",
     accent: "#c2410c",
     tint: "#fff7ed",
@@ -23,7 +23,7 @@ const TASKS = [
   {
     label: "Submit my DAR",
     description: "Snap a photo of your paper DAR or fill it in.",
-    href: "https://dar.xing.wtf",
+    href: "/dar",
     icon: "📋",
     accent: NAVY,
     tint: "#eaf1fb",
@@ -31,7 +31,7 @@ const TASKS = [
   {
     label: "Request time off",
     description: "Vacation, sick or personal time. Two weeks' notice.",
-    href: "https://timeoffrequest.xing.wtf",
+    href: "/timeoff",
     icon: "🗓️",
     accent: "#15803d",
     tint: "#ecfdf3",
@@ -39,7 +39,7 @@ const TASKS = [
   {
     label: "Respond to a write-up",
     description: "Acknowledge a coaching or disciplinary notice.",
-    href: "https://disciplinaryformresponse.xing.wtf",
+    href: "/writeup",
     icon: "✍️",
     accent: "#7c3aed",
     tint: "#f5f3ff",
@@ -112,7 +112,7 @@ export default function FormsPage() {
           ))}
         </div>
 
-        <a href="https://dar.xing.wtf/my-dars" style={{ display: "block", textAlign: "center", marginTop: "1.25rem", color: NAVY, fontWeight: 600, fontSize: "0.95rem" }}>
+        <a href="/dar/my-dars" style={{ display: "block", textAlign: "center", marginTop: "1.25rem", color: NAVY, fontWeight: 600, fontSize: "0.95rem" }}>
           See the DARs I&apos;ve sent from this phone
         </a>
 
