@@ -83,9 +83,14 @@ body {
 }
 .page {
   width: 8.5in;
-  height: 11in;
+  /* A little under 11in so browsers that add their own print margins
+     (phones, Safari) don't spill the footer onto a blank second page. */
+  height: 10.5in;
   padding: 0.4in 0.5in;
   position: relative;
+  overflow: hidden;
+  break-after: avoid;
+  page-break-after: avoid;
 }
 
 /* header */
