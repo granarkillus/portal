@@ -9,14 +9,14 @@ const getSupabase = () =>
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-const NAVY = "#1f4e79";
-const DARK = "#1a1a2e";
-const SOFT_BG = "#f4f6f9";
+const NAVY = "#1a4480";
+const DARK = "#243b5e";
+const SOFT_BG = "#f2f5fa";
 const WHITE = "#ffffff";
-const MUTED = "#6b7280";
-const BORDER = "#d1d5db";
-const TEXT = "#1a1a2e";
-const GREEN = "#2f6b3a";
+const MUTED = "#5b6474";
+const BORDER = "#dbe2ec";
+const TEXT = "#0f172a";
+const GREEN = "#15803d";
 
 interface Profile {
   full_name: string;
@@ -190,7 +190,7 @@ export default function OfficerDashboard() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)" }}>
 
       {/* Nav */}
       <div style={{ background: NAVY, padding: "0.75rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -202,7 +202,7 @@ export default function OfficerDashboard() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem" }}>{profile?.full_name || email}</div>
-          <button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: WHITE, borderRadius: 4, padding: "0.3rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: WHITE, borderRadius: 12, padding: "0.3rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit" }}>
             Sign Out
           </button>
         </div>
@@ -211,7 +211,7 @@ export default function OfficerDashboard() {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "2rem 1rem" }}>
 
         {awaitingApproval && (
-          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderLeft: "4px solid #d97706", borderRadius: 4, padding: "1rem 1.5rem", marginBottom: "1.5rem" }}>
+          <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderLeft: "4px solid #d97706", borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem" }}>
             <div style={{ fontWeight: 700, color: "#92400e", fontSize: "0.92rem", marginBottom: 4 }}>Account awaiting supervisor approval</div>
             <div style={{ fontSize: "0.78rem", color: "#78350f", lineHeight: 1.5 }}>
               You can submit forms now. Your past call-offs, DARs and requests will show here once a supervisor confirms your account.
@@ -221,7 +221,7 @@ export default function OfficerDashboard() {
 
         {/* Pending acknowledgement alert */}
         {pendingAck.length > 0 && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "4px solid #b91c1c", borderRadius: 4, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "4px solid #b91c1c", borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
               <div style={{ fontWeight: 700, color: "#b91c1c", fontSize: "0.92rem", marginBottom: 4 }}>
                 ⚠ Action Required — {pendingAck.length} Pending Disciplinary Acknowledgement{pendingAck.length > 1 ? "s" : ""}
@@ -232,7 +232,7 @@ export default function OfficerDashboard() {
             </div>
             <a
               href={`https://disciplinaryformresponse.xing.wtf/respond?id=${pendingAck[0].id}`}
-              style={{ background: "#b91c1c", color: WHITE, borderRadius: 4, padding: "0.5rem 1.25rem", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}
+              style={{ background: "#b91c1c", color: WHITE, borderRadius: 12, padding: "0.5rem 1.25rem", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}
             >
               Review Now
             </a>
@@ -242,13 +242,13 @@ export default function OfficerDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
 
           {/* Quick form links */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Submit a Form</span>
             </div>
             <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {formLinks.map((link) => (
-                <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 4, textDecoration: "none", fontSize: "0.88rem", fontWeight: 600, color: NAVY }}>
+                <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.88rem", fontWeight: 600, color: NAVY }}>
                   <span style={{ fontSize: "1.1rem" }}>{link.icon}</span>
                   {link.label}
                   <svg style={{ marginLeft: "auto" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
@@ -258,7 +258,7 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Profile */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>My Profile</span>
             </div>
@@ -284,7 +284,7 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Time-off requests */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Time-Off Requests</span>
               <a href="https://timeoffrequest.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
@@ -309,7 +309,7 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Call-offs */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Call-Off History</span>
               <a href="https://calloff.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
@@ -347,7 +347,7 @@ export default function OfficerDashboard() {
                         <button
                           onClick={() => document.getElementById(`doc-upload-${r.id}`)?.click()}
                           disabled={uploadingId === r.id}
-                          style={{ background: "none", border: `1px solid ${BORDER}`, color: NAVY, borderRadius: 4, padding: "0.3rem 0.65rem", fontSize: "0.7rem", fontWeight: 600, cursor: uploadingId === r.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploadingId === r.id ? 0.6 : 1 }}
+                          style={{ background: "none", border: `1px solid ${BORDER}`, color: NAVY, borderRadius: 12, padding: "0.3rem 0.65rem", fontSize: "0.7rem", fontWeight: 600, cursor: uploadingId === r.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploadingId === r.id ? 0.6 : 1 }}
                         >
                           {uploadingId === r.id ? "Uploading..." : "+ Add Documentation"}
                         </button>
@@ -363,7 +363,7 @@ export default function OfficerDashboard() {
           </div>
 
           {/* DARs */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recent DARs</span>
               <a href="https://dar.xing.wtf" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
@@ -385,7 +385,7 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Disciplinary */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
             <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
               <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Disciplinary Notices</span>
             </div>
