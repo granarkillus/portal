@@ -104,6 +104,7 @@ export default function TimeOffViewPage() {
                 ["Account", request.account],
                 ["Manager", request.manager],
                 ["Type", request.absence_type],
+                ["Use vacation", request.use_vacation == null ? "" : `${request.use_vacation ? "Yes" : "No"}${request.vacation_initials ? ` (${request.vacation_initials})` : ""}`],
                 ["Dates", request.dates_requested],
                 ["Submitted", formatDate(request.submitted_at)],
               ].map(([label, val]) => val ? (

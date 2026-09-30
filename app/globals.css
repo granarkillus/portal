@@ -28,6 +28,7 @@ label { -webkit-tap-highlight-color: transparent; }
 /* Side-by-side fields stack on phones */
 @media (max-width: 600px) {
   .stack-sm { flex-direction: column !important; gap: 0 !important; }
+  .picker-row { flex-direction: column !important; align-items: stretch !important; }
 }
 /* Page headers: title drops under the logo on phones instead of squeezing */
 @media (max-width: 600px) {

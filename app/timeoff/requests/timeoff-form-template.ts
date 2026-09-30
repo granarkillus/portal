@@ -17,6 +17,10 @@ export interface TimeOffRequest {
   dates_requested: string;
   employee_signature: string;
   employee_date: string;
+  // "Do you want to use vacation time if available? YES OR NO" + initials.
+  // Null/undefined on requests made before the question was added.
+  use_vacation?: boolean | null;
+  vacation_initials?: string | null;
   status: string;
   hours_available: string | null;
   approval_decision: string | null;
@@ -157,12 +161,21 @@ body {
   font-weight: 700;
 }
 
+/* vacation-time question */
+.vac-row { display: flex; align-items: flex-end; gap: 14px; margin: 4px 0 26px 0; font-size: 12pt; }
+.vac-q { position: relative; white-space: nowrap; }
+.yn { display: inline-block; padding: 0 4px; border: 1.5px solid transparent; border-radius: 50%; line-height: 1.15; }
+.yn.circled { border-color: #000; }
+.circle-cap { position: absolute; right: 0; top: 100%; font-size: 10.5pt; padding-top: 1px; }
+.vac-initial { display: flex; align-items: flex-end; gap: 10px; flex: 1; }
+.vac-initial .line { flex: 0 0 150px; border-bottom-width: 3px; text-align: center; font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
+
 /* notices */
 .notice {
   font-weight: 700;
   font-style: italic;
   font-size: 10.5pt;
-  margin: 28px 0 28px 0;
+  margin: 22px 0 22px 0;
 }
 
 /* signature rows */
@@ -272,6 +285,11 @@ export function buildTimeOffFormDocument(r: TimeOffRequest, opts: TimeOffFormOpt
     <span class="lbl">Type of Absence Requested:</span>
   </div>
   <div class="checkbox-row">${absenceChecks}</div>
+
+  <div class="vac-row">
+    <span class="vac-q">Do you want to use vacation time if available ? <span class="yn${r.use_vacation === true ? " circled" : ""}">YES</span> OR <span class="yn${r.use_vacation === false ? " circled" : ""}">NO</span><span class="circle-cap">Circle</span></span>
+    <span class="vac-initial"><span class="line">${esc(r.use_vacation == null ? "" : r.vacation_initials)}</span><span>Initial</span></span>
+  </div>
 
   <div class="field-row">
     <span class="lbl">Reason For Absence:</span>

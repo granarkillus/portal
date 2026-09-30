@@ -29,6 +29,8 @@ export default function AUSTimeOffForm() {
     employeeSignature: "",
     employeeDate: "",
     pickedDates: [] as string[],
+    useVacation: "" as "" | "yes" | "no",
+    vacationInitials: "",
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -52,11 +54,15 @@ export default function AUSTimeOffForm() {
 
   // Keep an unsent request on this phone if the tab is closed or the screen locks.
   const [queued, setQueued] = useState(false);
-  const draftHasContent = !!(form.absenceType || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.employeeSignature.trim() || form.account.trim() || form.manager.trim());
-  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved, pickedDates: Array.isArray(saved.pickedDates) ? saved.pickedDates : [] })), draftHasContent && !submitted);
+  const draftHasContent = !!(form.absenceType || form.useVacation || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.employeeSignature.trim() || form.account.trim() || form.manager.trim());
+  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved, pickedDates: Array.isArray(saved.pickedDates) ? saved.pickedDates : [], useVacation: saved.useVacation || "", vacationInitials: saved.vacationInitials || "" })), draftHasContent && !submitted);
+
+  // Initials for the vacation-time answer default to the officer's initials.
+  const autoInitials = form.employeeName.trim().split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join("").slice(0, 4);
+  const vacationInitials = (form.vacationInitials.trim() || autoInitials).toUpperCase();
 
   const required =
-    form.employeeName && form.absenceType && form.daysAndDates && form.employeeSignature;
+    form.employeeName && form.absenceType && form.useVacation && form.daysAndDates && form.employeeSignature;
 
   const handleSubmit = async () => {
     if (!required) { setTriedSubmit(true); return; }
@@ -85,6 +91,8 @@ export default function AUSTimeOffForm() {
       dates_need_review: !parsed.confident,
       employee_signature: form.employeeSignature,
       employee_date: form.employeeDate || null,
+      use_vacation: form.useVacation === "yes",
+      vacation_initials: vacationInitials || null,
       status: "pending",
     }, `Time-off request: ${form.daysAndDates}`);
 
@@ -117,6 +125,8 @@ export default function AUSTimeOffForm() {
       dates_requested: form.daysAndDates,
       employee_signature: form.employeeSignature,
       employee_date: form.employeeDate,
+      use_vacation: form.useVacation === "yes",
+      vacation_initials: vacationInitials,
       status: "pending",
       hours_available: null,
       approval_decision: null,
@@ -139,13 +149,13 @@ export default function AUSTimeOffForm() {
   const openSMS = () => {
     const type = form.absenceType === "Other" ? `Other – ${form.otherType}` : form.absenceType || "unspecified";
     const body = encodeURIComponent(
-      `AUS Time-Off Request\n\nEmployee: ${form.employeeName || "—"}\nEmp #: ${form.employeeNumber || "—"}\nAccount: ${form.account || "—"}\nManager: ${form.manager || "—"}\nType: ${type}\nReason: ${form.reasonForAbsence || "—"}\nDate(s): ${form.daysAndDates || "—"}\n\nPDF attached.`
+      `AUS Time-Off Request\n\nEmployee: ${form.employeeName || "—"}\nEmp #: ${form.employeeNumber || "—"}\nAccount: ${form.account || "—"}\nManager: ${form.manager || "—"}\nType: ${type}\nUse vacation time: ${form.useVacation === "yes" ? "Yes" : form.useVacation === "no" ? "No" : "—"}\nReason: ${form.reasonForAbsence || "—"}\nDate(s): ${form.daysAndDates || "—"}\n\nPDF attached.`
     );
     window.location.href = `sms:${SUPERVISOR_PHONE}&body=${body}`;
   };
 
   const handleReset = () => {
-    setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "", pickedDates: [] });
+    setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "", pickedDates: [], useVacation: "", vacationInitials: "" });
     setSubmitted(false);
     setQueued(false);
     setError("");
@@ -193,6 +203,30 @@ export default function AUSTimeOffForm() {
                   <input value={form.otherType} onChange={set("otherType")} placeholder="Specify" style={{ ...inputStyle, width: 130 }} />
                 )}
               </div>
+            </div>
+
+            <div style={{ background: SOFT_BG, border: `1px solid ${triedSubmit && !form.useVacation ? "#b91c1c" : BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1.25rem" }}>
+              <Label>Do you want to use vacation time if available? <span style={{ color: "#b3261e" }}>*</span></Label>
+              <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
+                {(["yes", "no"] as const).map((v) => (
+                  <button
+                    key={v}
+                    type="button"
+                    aria-pressed={form.useVacation === v}
+                    onClick={() => setForm((f) => ({ ...f, useVacation: v }))}
+                    style={{ minWidth: 88, minHeight: 46, borderRadius: 999, fontFamily: "inherit", fontSize: "0.98rem", fontWeight: 700, cursor: "pointer", border: `1.5px solid ${form.useVacation === v ? NAVY : BORDER}`, background: form.useVacation === v ? NAVY : WHITE, color: form.useVacation === v ? WHITE : TEXT }}
+                  >
+                    {form.useVacation === v ? "✓ " : ""}{v === "yes" ? "Yes" : "No"}
+                  </button>
+                ))}
+                {form.useVacation && (
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", fontSize: "0.9rem", color: MUTED }}>
+                    Initials
+                    <input value={form.vacationInitials} onChange={set("vacationInitials")} placeholder={autoInitials || "AB"} maxLength={4} style={{ ...inputStyle, width: 80, textAlign: "center", textTransform: "uppercase" }} />
+                  </label>
+                )}
+              </div>
+              {triedSubmit && !form.useVacation && <div style={{ color: "#b91c1c", fontSize: "0.85rem", fontWeight: 600, marginTop: 6 }}>Pick Yes or No</div>}
             </div>
 
             <Field label="Reason For Absence" value={form.reasonForAbsence} onChange={set("reasonForAbsence")} />
@@ -243,7 +277,7 @@ export default function AUSTimeOffForm() {
                 </button>
                 {!required && (
                   <div style={{ fontSize: "0.76rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center" }}>
-                    Complete required fields: Employee Name, Absence Type, Date(s), and Signature
+                    Complete required fields: Employee Name, Absence Type, Use Vacation Time, Date(s), and Signature
                   </div>
                 )}
               </>
@@ -381,7 +415,7 @@ function DatePicker({ picked, onChange }: { picked: string[]; onChange: (dates: 
   return (
     <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.75rem" }}>
       <Label>📅 Pick your dates <span style={{ color: "#b3261e" }}>*</span></Label>
-      <div className="stack-sm" style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
+      <div className="picker-row" style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: "0.8rem", color: MUTED, marginBottom: 4 }}>First day off</div>
           <input type="date" value={from} min={today} onChange={(e) => { setFrom(e.target.value); if (to && to < e.target.value) setTo(""); }} style={inputStyle} />
