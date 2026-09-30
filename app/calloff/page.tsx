@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { getOfficer, rememberOfficer, forgetOfficer } from "@/lib/officer-memory";
+import { useDraft, clearDraft } from "@/lib/drafts";
+import { newId, sendOrQueue } from "@/lib/outbox";
+import DraftNotice from "@/components/draft-notice";
 
 const getSupabase = () =>
   createClient(
@@ -99,6 +102,15 @@ export default function CallOffForm() {
   };
   useEffect(applyRemembered, []);
 
+  // Keep an unsent call-off on this phone if the tab is closed or the screen locks.
+  const [queued, setQueued] = useState(false);
+  const draftHasContent = !!(form.reason || form.shiftStart || form.shiftEnd || form.comments.trim() || form.coverageFound || form.otherReason.trim());
+  const draftRestored = useDraft("calloff", { form, otherPost, otherDate }, (saved) => {
+    setForm((f) => ({ ...f, ...saved.form }));
+    setOtherPost(!!saved.otherPost);
+    setOtherDate(!!saved.otherDate);
+  }, draftHasContent && !submitted);
+
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
@@ -146,14 +158,17 @@ export default function CallOffForm() {
         .from("calloff-documents")
         .upload(fileName, file, { cacheControl: "3600", upsert: false });
       if (uploadError || !uploadData) {
-        setError("Your document didn't upload. Try again, or remove it to submit without it.");
+        setError(navigator.onLine === false
+          ? "No signal, so your document can't upload. Remove it to save your call-off and send it when you're back online, or try again once you have signal."
+          : "Your document didn't upload. Try again, or remove it to submit without it.");
         setSubmitting(false);
         return;
       }
       docUrl = fileName;
     }
 
-    const { error: dbError } = await supabase.from("calloff_submissions").insert([{
+    const result = await sendOrQueue("calloff", "calloff_submissions", {
+      id: newId(),
       officer_name: officerName,
       employee_number: form.employeeNumber.trim() || null,
       post: form.post.trim(),
@@ -169,14 +184,16 @@ export default function CallOffForm() {
       signature: officerName,
       document_url: docUrl,
       submitted_at: timestamp,
-    }]);
+    }, `Call-off for ${formatDate(form.shiftDate)} (${form.post.trim()})`);
 
-    if (dbError) {
+    if (result.status === "failed") {
       setError("Submission failed. Please check your connection and try again.");
       setSubmitting(false);
       return;
     }
 
+    clearDraft("calloff");
+    setQueued(result.status === "queued");
     rememberOfficer({ name: officerName, employeeNumber: form.employeeNumber.trim(), post: form.post.trim() });
 
     setSubmittedData({
@@ -200,9 +217,9 @@ Post: ${submittedData.post}
 Shift: ${submittedData.shiftStart}${submittedData.shiftEnd ? ` – ${submittedData.shiftEnd}` : ""}
 Reason: ${submittedData.reason}
 Notice Type: ${submittedData.noticeType}
-Submitted: ${submittedData.timestamp}
+${queued ? "Saved" : "Submitted"}: ${submittedData.timestamp}
 
-Your supervisor has been notified by email.`;
+${queued ? "Saved on this phone (no signal). It will send and email your supervisor when you're back online." : "Your supervisor has been notified by email."}`;
   };
 
   const handleCopy = () => {
@@ -215,7 +232,7 @@ Your supervisor has been notified by email.`;
   const handleReset = () => {
     setForm(emptyForm);
     setOtherPost(false); setOtherDate(false); setConfirmed(false); setShowErrors(false);
-    setFile(null); setSubmitted(false); setSubmittedData(null); setError("");
+    setFile(null); setSubmitted(false); setSubmittedData(null); setError(""); setQueued(false);
     applyRemembered();
   };
 
@@ -235,9 +252,15 @@ Your supervisor has been notified by email.`;
               <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup></div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services</div>
             </div>
-            <div style={{ textAlign: "right" }}><div style={{ color: WHITE, fontSize: "0.88rem", fontWeight: 700 }}>Call-Off Submitted</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ color: WHITE, fontSize: "0.88rem", fontWeight: 700 }}>{queued ? "Call-Off Saved" : "Call-Off Submitted"}</div></div>
           </div>
           <div style={{ padding: "1.5rem 2rem" }}>
+            {queued ? (
+              <div style={{ background: "#fff7ed", border: "1px solid #fdba74", borderLeft: "4px solid #c2410c", borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem", fontSize: "0.9rem", color: "#7c2d12", lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.98rem", marginBottom: 4 }}>⏳ No signal. Your call-off is saved on this phone.</div>
+                It will send automatically, and your supervisor will be emailed, as soon as you&apos;re back online. Open this app again when you have signal. <strong>If your shift is soon, call your supervisor too.</strong>
+              </div>
+            ) : (<>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
               <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
@@ -250,6 +273,7 @@ Your supervisor has been notified by email.`;
             <div style={{ background: "#e8f5e9", border: "1px solid #b7dcbf", borderLeft: `4px solid ${GREEN}`, borderRadius: 12, padding: "0.85rem 1rem", marginBottom: "1rem", fontSize: "0.85rem", color: "#1e4d27", lineHeight: 1.5 }}>
               Your supervisor has been emailed your call-off. Thank you for your submission. Keep the receipt below for your records.
             </div>
+            </>)}
             <div style={{ fontSize: "0.72rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Your Receipt</div>
             <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem", marginBottom: "1rem", fontSize: "0.82rem", color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
               {getCopyMessage()}
@@ -276,6 +300,7 @@ Your supervisor has been notified by email.`;
         </div>
 
         <div style={{ padding: "0.25rem 1.25rem 1.5rem" }}>
+          {draftRestored && <div style={{ marginTop: "1.25rem" }}><DraftNotice what="call-off" onStartOver={() => { clearDraft("calloff"); handleReset(); }} /></div>}
 
           <Section title="About you">
             <div id="officerName">

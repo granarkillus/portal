@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPublicSupabase } from "@/lib/supabase";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
+import { useDraft, clearDraft } from "@/lib/drafts";
+import { newId, sendOrQueue } from "@/lib/outbox";
+import DraftNotice from "@/components/draft-notice";
 import { buildTimeOffFormDocument, TimeOffRequest } from "./requests/timeoff-form-template";
 
 const NAVY = "#1a4480";
@@ -46,6 +48,11 @@ export default function AUSTimeOffForm() {
     if (me.name) setForm((f) => ({ ...f, employeeName: f.employeeName || me.name || "", employeeNumber: f.employeeNumber || me.employeeNumber || "" }));
   }, []);
 
+  // Keep an unsent request on this phone if the tab is closed or the screen locks.
+  const [queued, setQueued] = useState(false);
+  const draftHasContent = !!(form.absenceType || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.employeeSignature.trim() || form.account.trim() || form.manager.trim());
+  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved })), draftHasContent && !submitted);
+
   const required =
     form.employeeName && form.absenceType && form.daysAndDates && form.employeeSignature;
 
@@ -54,12 +61,12 @@ export default function AUSTimeOffForm() {
     setSubmitting(true);
     setError("");
 
-    const supabase = getPublicSupabase();
     const absenceType = form.absenceType === "Other"
       ? `Other: ${form.otherType}`
       : form.absenceType;
 
-    const { error: dbError } = await supabase.from("time_off_requests").insert([{
+    const result = await sendOrQueue("timeoff", "time_off_requests", {
+      id: newId(),
       officer_name: form.employeeName,
       employee_number: form.employeeNumber || null,
       account: form.account || null,
@@ -70,14 +77,16 @@ export default function AUSTimeOffForm() {
       employee_signature: form.employeeSignature,
       employee_date: form.employeeDate || null,
       status: "pending",
-    }]);
+    }, `Time-off request: ${form.daysAndDates}`);
 
-    if (dbError) {
+    if (result.status === "failed") {
       setError("Submission failed. Please try again.");
       setSubmitting(false);
       return;
     }
 
+    clearDraft("timeoff");
+    setQueued(result.status === "queued");
     generatePDF();
     rememberOfficer({ name: form.employeeName.trim(), employeeNumber: form.employeeNumber.trim() || undefined });
     setSubmitted(true);
@@ -129,6 +138,7 @@ export default function AUSTimeOffForm() {
   const handleReset = () => {
     setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "" });
     setSubmitted(false);
+    setQueued(false);
     setError("");
   };
 
@@ -150,6 +160,8 @@ export default function AUSTimeOffForm() {
         </div>
 
         <div style={{ padding: "0 0 2rem" }}>
+          {draftRestored && !submitted && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="time-off request" onStartOver={() => { clearDraft("timeoff"); handleReset(); const me = getOfficer(); if (me.name) setForm((f) => ({ ...f, employeeName: me.name || "", employeeNumber: me.employeeNumber || "" })); }} /></div>}
+
           <SectionBar label="Time Off Information" />
           <div style={{ padding: "1.5rem 2rem 0" }}>
             <Field label="Employee Name" value={form.employeeName} onChange={set("employeeName")} required />
@@ -224,9 +236,15 @@ export default function AUSTimeOffForm() {
               </>
             ) : (
               <>
-                <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem", color: "#2f6b3a", fontWeight: 600, textAlign: "center" }}>
-                  Request submitted — PDF is ready. Save it from the print dialog, then text it to your supervisor.
-                </div>
+                {queued ? (
+                  <div style={{ background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem", color: "#7c2d12", fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
+                    No signal, so your request is saved on this phone and will send automatically when you&apos;re back online. Your PDF is ready to save now.
+                  </div>
+                ) : (
+                  <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem", color: "#2f6b3a", fontWeight: 600, textAlign: "center" }}>
+                    Request submitted — PDF is ready. Save it from the print dialog, then text it to your supervisor.
+                  </div>
+                )}
                 <button onClick={openSMS} style={{ ...btnStyle("#2f6b3a"), display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
