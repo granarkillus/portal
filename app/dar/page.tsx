@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getPublicSupabase } from "@/lib/supabase";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
 import { newDarId, rememberDar } from "@/lib/my-dars";
+import { useDraft, clearDraft } from "@/lib/drafts";
+import { sendOrQueue } from "@/lib/outbox";
+import DraftNotice from "@/components/draft-notice";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -94,6 +96,14 @@ export default function DARForm() {
     if (me.name) setForm((f) => ({ ...f, officerName: f.officerName || me.name || "", scheduledShift: f.scheduledShift || me.post || "" }));
   }, []);
 
+  // Keep an unsent DAR on this phone, even if the tab is closed and reopened.
+  const draftHasContent = !!(form.shiftStart || form.shiftEnd || form.signature || entries.some((e) => e.activity.trim() || e.from || e.to));
+  const draftRestored = useDraft("dar", { form, entries }, (saved) => {
+    setForm((f) => ({ ...f, ...saved.form }));
+    if (Array.isArray(saved.entries) && saved.entries.length) setEntries(saved.entries);
+  }, draftHasContent && !submitted);
+  const [queued, setQueued] = useState(false);
+
   const required = form.officerName && form.date && form.signature;
 
   const handleSubmit = async () => {
@@ -101,9 +111,8 @@ export default function DARForm() {
     setSubmitting(true);
     setError("");
 
-    const supabase = getPublicSupabase();
     const darId = newDarId();
-    const { error: dbError } = await supabase.from("dar_submissions").insert([{
+    const result = await sendOrQueue("dar", "dar_submissions", {
       id: darId,
       officer_name: form.officerName,
       client_site: form.clientSite,
@@ -118,14 +127,16 @@ export default function DARForm() {
       received_detex: form.receivedDetex,
       activity_log: entries.filter((e) => e.activity.trim()),
       signature: form.signature,
-    }]);
+    }, `DAR for ${form.date}`);
 
-    if (dbError) {
+    if (result.status === "failed") {
       setError("Submission failed. Please try again.");
       setSubmitting(false);
       return;
     }
 
+    clearDraft("dar");
+    setQueued(result.status === "queued");
     rememberDar(darId);
     setSubmittedDate(form.date);
     setSubmittedName(form.officerName);
@@ -156,8 +167,11 @@ export default function DARForm() {
       { id: 4, from: "", to: "", activity: "" },
     ]);
     setSubmitted(false);
+    setQueued(false);
     setError("");
   };
+
+  const startOver = () => { clearDraft("dar"); handleReset(); const me = getOfficer(); if (me.name) setForm((f) => ({ ...f, officerName: me.name || "", scheduledShift: me.post || "" })); };
 
   if (submitted) {
     return (
@@ -175,9 +189,11 @@ export default function DARForm() {
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>DAR Submitted</div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>{queued ? "DAR Saved" : "DAR Submitted"}</div>
             <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-              Your Daily Activity Report for {submittedDate || "today"} has been recorded.
+              {queued
+                ? <>No signal right now, so your DAR for {submittedDate || "today"} is saved on this phone. It will send automatically when you&apos;re back online. Just open this app again if it hasn&apos;t sent.</>
+                : <>Your Daily Activity Report for {submittedDate || "today"} has been recorded.</>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
               <button onClick={handleReset} style={btnStyle(NAVY)}>Submit Another DAR</button>
@@ -231,6 +247,8 @@ export default function DARForm() {
               </svg>
             </a>
           </div>
+
+          {draftRestored && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="DAR" onStartOver={startOver} /></div>}
 
           <SectionBar label="Section I: Employee Information" />
           <div style={{ padding: "1.25rem 2rem 0" }}>

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import OfflineSupport from '@/components/offline-support'
 
 export const metadata: Metadata = {
   title: "Allied Universal · Washington University",
@@ -18,7 +19,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
         <meta name="theme-color" content="#1a4480" />
       </head>
-      <body>{children}</body>
+      <body>
+        <OfflineSupport />
+        {children}
+      </body>
     </html>
   )
 }

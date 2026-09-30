@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { getPublicSupabase } from "@/lib/supabase";
 import { newDarId, rememberDar } from "@/lib/my-dars";
+import { useDraft, clearDraft } from "@/lib/drafts";
+import { sendOrQueue } from "@/lib/outbox";
+import DraftNotice from "@/components/draft-notice";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -37,6 +39,12 @@ export default function ScanPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [queued, setQueued] = useState(false);
+
+  // Keep the scanned details (not the photo) if the tab is closed before sending.
+  const draftRestored = useDraft("dar-scan", extracted, (saved) => {
+    if (saved) { setExtracted(saved); setEditMode(true); }
+  }, !!extracted && !submitted);
 
   const handleFile = (file: File) => {
     setError("");
@@ -125,10 +133,9 @@ export default function ScanPage() {
     setSubmitting(true);
     setError("");
 
-    const supabase = getPublicSupabase();
     const darId = newDarId();
 
-    const { error: dbError } = await supabase.from("dar_submissions").insert([{
+    const result = await sendOrQueue("dar", "dar_submissions", {
       id: darId,
       officer_name: extracted.officer_name,
       client_site: "Washington University",
@@ -143,14 +150,16 @@ export default function ScanPage() {
       received_detex: extracted.received_detex,
       activity_log: extracted.activity_log.filter((e) => e.activity.trim()),
       signature: extracted.signature,
-    }]);
+    }, `DAR for ${extracted.date || "today"}`);
 
-    if (dbError) {
+    if (result.status === "failed") {
       setError("Submission failed. Please try again.");
       setSubmitting(false);
       return;
     }
 
+    clearDraft("dar-scan");
+    setQueued(result.status === "queued");
     rememberDar(darId);
     setSubmitted(true);
     setSubmitting(false);
@@ -173,10 +182,12 @@ export default function ScanPage() {
             </div>
             <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>DAR Saved</div>
             <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-              The scanned DAR for {extracted?.officer_name || "the officer"} has been saved to the system.
+              {queued
+                ? <>No signal right now, so the DAR for {extracted?.officer_name || "the officer"} is saved on this phone. It will send automatically when you&apos;re back online.</>
+                : <>The scanned DAR for {extracted?.officer_name || "the officer"} has been saved to the system.</>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              <button onClick={() => { setImage(null); setExtracted(null); setSubmitted(false); setEditMode(false); }} style={btnStyle(NAVY)}>Scan Another DAR</button>
+              <button onClick={() => { setImage(null); setExtracted(null); setSubmitted(false); setEditMode(false); setQueued(false); }} style={btnStyle(NAVY)}>Scan Another DAR</button>
               <a href="/forms" style={btnOutlineStyle(NAVY)}>Go to Officer Portal</a>
             </div>
           </div>
@@ -210,6 +221,8 @@ export default function ScanPage() {
         </div>
 
         <div style={{ padding: "0 0 2rem" }}>
+
+          {draftRestored && editMode && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="scanned DAR" onStartOver={() => { clearDraft("dar-scan"); setExtracted(null); setEditMode(false); setImage(null); }} /></div>}
 
           <SectionBar label="Step 1 — Take or Upload a Photo of the Paper DAR" />
           <div style={{ padding: "1.25rem 2rem 0" }}>

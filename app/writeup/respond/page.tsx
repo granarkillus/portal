@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getPublicSupabase } from "@/lib/supabase";
+import { useDraft, clearDraft } from "@/lib/drafts";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -64,6 +65,13 @@ export default function RespondPage() {
       });
   }, []);
 
+  // Keep an unsent response on this phone if the tab is closed before signing.
+  const draftKey = notice && !alreadySigned ? `writeup-${notice.id}` : null;
+  useDraft(draftKey, { agreement, comments, signature, dateSigned }, (saved) => {
+    setAgreement(saved.agreement || ""); setComments(saved.comments || "");
+    setSignature(saved.signature || ""); setDateSigned(saved.dateSigned || "");
+  }, !submitted && !!(agreement || comments.trim() || signature.trim()));
+
   const required = agreement && signature && dateSigned;
 
   const handleSubmit = async () => {
@@ -87,6 +95,7 @@ export default function RespondPage() {
       return;
     }
 
+    clearDraft(`writeup-${notice.id}`);
     setSubmitted(true);
     setSubmitting(false);
   };
