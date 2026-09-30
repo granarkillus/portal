@@ -106,6 +106,9 @@ export default function RequestsPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               Dashboard
             </a>
+            <a href="/supervisor/calendar" style={{ color: WHITE, fontSize: "0.75rem", textDecoration: "none", fontWeight: 700, border: "1px solid rgba(255,255,255,0.5)", borderRadius: 999, padding: "0.25rem 0.7rem" }}>
+              📅 Calendar
+            </a>
             <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700 }}>Time-Off Requests</div>
             <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Washington University</div>
           </div>
