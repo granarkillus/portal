@@ -22,7 +22,7 @@ const TASKS = [
   },
   {
     label: "Submit my DAR",
-    description: "Snap a photo of your paper DAR or fill it in.",
+    description: "Enter your shift, then tap to fill in your activity.",
     href: "/dar",
     icon: "📋",
     accent: NAVY,

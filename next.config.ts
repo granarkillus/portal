@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    // The photo scanner was retired; old links go to the DAR form.
+    return [{ source: "/dar/scan", destination: "/dar", permanent: false }];
+  },
   async headers() {
     return [
       {

@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
 import { newDarId, rememberDar } from "@/lib/my-dars";
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
+import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
 
 const NAVY = "#1a4480";
-const DARK = "#243b5e";
 const SOFT_BG = "#f2f5fa";
 const WHITE = "#ffffff";
 const MUTED = "#5b6474";
@@ -21,7 +21,12 @@ interface ActivityEntry {
   from: string;
   to: string;
   activity: string;
+  phrase?: string; // last suggestion tapped (kept on the phone only)
 }
+
+// "18:00" for the time pickers; older drafts stored "1800".
+const toPicker = (t: string) => /^\d{4}$/.test(t) ? `${t.slice(0, 2)}:${t.slice(2)}` : t;
+const toPaper = (t: string) => t.replace(":", "");
 
 export default function DARForm() {
   const getCentralToday = () => {
@@ -84,8 +89,47 @@ export default function DARForm() {
   const removeEntry = (id: number) =>
     setEntries((e) => e.filter((entry) => entry.id !== id));
 
-  const updateEntry = (id: number, field: string, value: string) =>
+  const updateEntry = (id: number, field: string, value: string) => {
+    // Once they change an entry time themselves, stop re-timing entries.
+    if (field === "from" || field === "to") setAutoTimes(false);
     setEntries((e) => e.map((entry) => entry.id === id ? { ...entry, [field]: value } : entry));
+  };
+
+  // Entry times fill in from the shift: 4 blocks for a normal shift, more for
+  // long ones. Anything already written in an entry is kept.
+  const [autoTimes, setAutoTimes] = useState(true);
+  const shiftReady = toMinutes(form.shiftStart) !== null && toMinutes(form.shiftEnd) !== null;
+  useEffect(() => {
+    if (!shiftReady || !autoTimes) return;
+    const blocks = shiftBlocks(form.shiftStart, form.shiftEnd);
+    setEntries((prev) => {
+      const next = blocks.map((b, i) => ({ id: prev[i]?.id ?? Date.now() + i, activity: prev[i]?.activity ?? "", phrase: prev[i]?.phrase, ...b }));
+      // Keep extra entries that already have writing in them.
+      return [...next, ...prev.slice(blocks.length).filter((e) => e.activity.trim())];
+    });
+  }, [form.shiftStart, form.shiftEnd, autoTimes, shiftReady]);
+
+  // Suggestion shuffles per entry ("More ideas").
+  const [seeds, setSeeds] = useState<Record<number, number>>({});
+  const activityRefs = useRef<Record<number, HTMLTextAreaElement | null>>({});
+  const focusBlank = (id: number) => setTimeout(() => {
+    const el = activityRefs.current[id];
+    if (!el) return;
+    el.focus();
+    const i = el.value.indexOf(BLANK);
+    if (i >= 0) el.setSelectionRange(i, i + BLANK.length);
+    else el.setSelectionRange(el.value.length, el.value.length);
+  }, 0);
+  const tapPhrase = (id: number, phrase: string) => {
+    setEntries((list) => list.map((e) => e.id === id
+      ? { ...e, phrase, activity: e.activity.trim() ? `${e.activity.trim().replace(/[.;]$/, "")}; ${phrase}` : phrase }
+      : e));
+    focusBlank(id);
+  };
+  const fillBlank = (id: number, word: string) => {
+    setEntries((list) => list.map((e) => e.id === id ? { ...e, activity: e.activity.replace(BLANK, word) } : e));
+    focusBlank(id);
+  };
 
   // Show what's missing (in red) once they've tried to submit.
   const [triedSubmit, setTriedSubmit] = useState(false);
@@ -98,16 +142,37 @@ export default function DARForm() {
 
   // Keep an unsent DAR on this phone, even if the tab is closed and reopened.
   const draftHasContent = !!(form.shiftStart || form.shiftEnd || form.signature || entries.some((e) => e.activity.trim() || e.from || e.to));
-  const draftRestored = useDraft("dar", { form, entries }, (saved) => {
-    setForm((f) => ({ ...f, ...saved.form }));
+  const draftRestored = useDraft("dar", { form, entries, autoTimes }, (saved) => {
+    setForm((f) => ({ ...f, ...saved.form, shiftStart: toPicker(saved.form?.shiftStart || ""), shiftEnd: toPicker(saved.form?.shiftEnd || "") }));
     if (Array.isArray(saved.entries) && saved.entries.length) setEntries(saved.entries);
+    if (saved.autoTimes === false) setAutoTimes(false);
   }, draftHasContent && !submitted);
   const [queued, setQueued] = useState(false);
 
-  const required = form.officerName && form.date && form.signature;
+  // What's still needed before this DAR can be sent.
+  const filledEntries = entries.filter((e) => e.activity.trim() || e.from.trim() || e.to.trim());
+  const entryIssues = entries.map((e) => (e.activity.trim() || e.from.trim() || e.to.trim() || entries.indexOf(e) < MIN_ENTRIES ? entryProblem(e) : null));
+  const sameEverywhere = filledEntries.length >= MIN_ENTRIES && new Set(filledEntries.map((e) => e.activity.trim().toLowerCase())).size === 1;
+  const missing: string[] = [];
+  if (!form.officerName.trim()) missing.push("officer name");
+  if (!form.date.trim()) missing.push("date");
+  if (!shiftReady) missing.push("shift start and end times");
+  else {
+    if (filledEntries.length < MIN_ENTRIES) missing.push(`at least ${MIN_ENTRIES} activity entries`);
+    if (entryIssues.some(Boolean)) missing.push("fix the highlighted entries");
+    if (sameEverywhere) missing.push("entries can't all say the same thing");
+  }
+  if (!form.signature.trim()) missing.push("signature");
+  const required = missing.length === 0;
 
   const handleSubmit = async () => {
-    if (!required) { setTriedSubmit(true); return; }
+    if (!required) {
+      setTriedSubmit(true);
+      const firstBad = entries.find((_, i) => entryIssues[i]);
+      const target = !shiftReady ? document.getElementById("shift-times") : firstBad ? document.getElementById(`entry-${firstBad.id}`) : null;
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setSubmitting(true);
     setError("");
 
@@ -119,13 +184,13 @@ export default function DARForm() {
       branch: form.branch,
       date: form.date,
       scheduled_shift: form.scheduledShift || null,
-      shift_start: form.shiftStart || null,
-      shift_end: form.shiftEnd || null,
+      shift_start: toPaper(form.shiftStart) || null,
+      shift_end: toPaper(form.shiftEnd) || null,
       received_radio: form.receivedRadio,
       received_pager: form.receivedPager,
       received_keys: form.receivedKeys,
       received_detex: form.receivedDetex,
-      activity_log: entries.filter((e) => e.activity.trim()),
+      activity_log: entries.filter((e) => e.activity.trim()).map(({ id, from, to, activity }) => ({ id, from: from.trim(), to: to.trim(), activity: activity.trim() })),
       signature: form.signature,
     }, `DAR for ${form.date}`);
 
@@ -231,23 +296,6 @@ export default function DARForm() {
 
         <div style={{ padding: "0 0 2rem" }}>
 
-          <div style={{ padding: "1.25rem 2rem 0" }}>
-            <a href="/dar/scan" style={{ display: "flex", alignItems: "center", gap: "1rem", background: SOFT_BG, border: `1.5px solid ${BORDER}`, borderLeft: `4px solid ${NAVY}`, borderRadius: 6, padding: "1rem 1.25rem", textDecoration: "none", color: NAVY }}>
-              <div style={{ flex: "none", width: 44, height: 44, borderRadius: 8, background: NAVY, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-                </svg>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 800, fontSize: "0.95rem", letterSpacing: "0.01em" }}>Have a paper DAR?</div>
-                <div style={{ fontSize: "0.78rem", color: MUTED, marginTop: 2 }}>Tap here to scan and upload it instead of filling this form out</div>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={NAVY} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </a>
-          </div>
-
           {draftRestored && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="DAR" onStartOver={startOver} /></div>}
 
           <SectionBar label="Section I: Employee Information" />
@@ -270,49 +318,106 @@ export default function DARForm() {
           </div>
 
           <SectionBar label="Section II: Record of Hours Worked" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
-            <Row>
-              <Field label="Time In (shift start)" value={form.shiftStart} onChange={set("shiftStart")} placeholder="1800" />
-              <Field label="Time Out (shift end)" value={form.shiftEnd} onChange={set("shiftEnd")} placeholder="0200" />
-            </Row>
+          <div id="shift-times" style={{ padding: "1.25rem 2rem 0" }}>
+            <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "0.75rem" }}>Start here: your activity times fill in from your shift.</div>
+            <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
+              <div style={{ flex: 1, marginBottom: "1rem" }}>
+                <Label>Time In (shift start)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
+                <input type="time" value={form.shiftStart} onChange={set("shiftStart")} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftStart) === null ? "#b91c1c" : "#d1d5db" }} />
+              </div>
+              <div style={{ flex: 1, marginBottom: "1rem" }}>
+                <Label>Time Out (shift end)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
+                <input type="time" value={form.shiftEnd} onChange={set("shiftEnd")} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftEnd) === null ? "#b91c1c" : "#d1d5db" }} />
+              </div>
+            </div>
           </div>
 
           <SectionBar label="Section III: Activity Details" />
           <div style={{ padding: "1.25rem 2rem 0" }}>
-            <div style={{ fontSize: "0.75rem", color: MUTED, marginBottom: "1rem", lineHeight: 1.5 }}>
-              Record all activity below. Mark an asterisk (*) next to any security incident. Attach all Incident Reports and supporting documents.
-            </div>
-
-            {entries.map((entry, index) => (
-              <div key={entry.id} style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "0.75rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: "0.72rem", fontWeight: 700, color: NAVY, textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry {index + 1}</span>
-                  {entries.length > 1 && (
-                    <button onClick={() => removeEntry(entry.id)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.75rem", padding: "2px 6px" }}>
-                      Remove
-                    </button>
-                  )}
-                </div>
-                <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.5rem" }}>
-                  <div style={{ width: 100 }}>
-                    <Label>From</Label>
-                    <input value={entry.from} onChange={(e) => updateEntry(entry.id, "from", e.target.value)} placeholder={activityTimePlaceholder(index).from} style={inputStyle} />
-                  </div>
-                  <div style={{ width: 100 }}>
-                    <Label>To</Label>
-                    <input value={entry.to} onChange={(e) => updateEntry(entry.id, "to", e.target.value)} placeholder={activityTimePlaceholder(index).to} style={inputStyle} />
-                  </div>
-                </div>
-                <div>
-                  <Label>Activity</Label>
-                  <input value={entry.activity} onChange={(e) => updateEntry(entry.id, "activity", e.target.value)} placeholder="Describe activity or incident" style={inputStyle} />
-                </div>
+            {!shiftReady ? (
+              <div style={{ background: SOFT_BG, border: `1.5px dashed ${BORDER}`, borderRadius: 12, padding: "1.25rem", textAlign: "center", color: MUTED, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                ⏰ Enter your <strong style={{ color: TEXT }}>Time In</strong> and <strong style={{ color: TEXT }}>Time Out</strong> above.<br />Your activity entries will be set up for you.
               </div>
-            ))}
+            ) : (
+              <>
+                <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "1rem", lineHeight: 1.5 }}>
+                  At least {MIN_ENTRIES} entries. <strong style={{ color: TEXT }}>Tap an idea</strong> to start a line, then tap or type to fill in the blank, or just write your own. Mark an asterisk (*) next to any security incident.
+                </div>
 
-            <button onClick={addEntry} style={{ background: "none", border: `1.5px dashed ${NAVY}`, borderRadius: 12, color: NAVY, padding: "0.6rem 1rem", fontSize: "0.82rem", fontWeight: 700, cursor: "pointer", width: "100%", marginBottom: "0.5rem", fontFamily: "inherit" }}>
-              + Add Entry
-            </button>
+                {entries.map((entry, index) => {
+                  const issue = triedSubmit ? entryIssues[index] : null;
+                  const used = entries.filter((o) => o.id !== entry.id).map((o) => o.phrase || "");
+                  const ideas = suggestionsFor(index, entries.length, seeds[entry.id] || 0, used);
+                  const hasBlank = entry.activity.includes(BLANK);
+                  const before = hasBlank ? entry.activity.slice(0, entry.activity.indexOf(BLANK)).trim().split(/\s+/).pop()?.toLowerCase() || "" : "";
+                  const after = hasBlank ? entry.activity.slice(entry.activity.indexOf(BLANK) + BLANK.length).trim().split(/\s+/)[0]?.toLowerCase() || "" : "";
+                  const fillChoices = /^(vehicles|visitors)/.test(after)
+                    ? ["0", "1", "2", "3", "5", "10+"]
+                    : ["with", "to", "from", "assisted", "escorted", "notified", "reported"].includes(before) && !/^at$/.test(after)
+                      ? PEOPLE
+                      : placesFor(form.scheduledShift).slice(0, 10);
+                  return (
+                    <div key={entry.id} id={`entry-${entry.id}`} style={{ background: SOFT_BG, border: `1.5px solid ${issue ? "#fca5a5" : BORDER}`, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "0.85rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 800, color: NAVY, textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry {index + 1}</span>
+                        <input aria-label="From" value={entry.from} onChange={(e) => updateEntry(entry.id, "from", e.target.value)} placeholder="From" inputMode="numeric" style={timeBox} />
+                        <span style={{ color: MUTED }}>–</span>
+                        <input aria-label="To" value={entry.to} onChange={(e) => updateEntry(entry.id, "to", e.target.value)} placeholder="To" inputMode="numeric" style={timeBox} />
+                        <div style={{ flex: 1 }} />
+                        {entries.length > MIN_ENTRIES && (
+                          <button type="button" onClick={() => removeEntry(entry.id)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.8rem", padding: "2px 4px", minHeight: 0 }}>Remove</button>
+                        )}
+                      </div>
+
+                      <textarea
+                        ref={(el) => { activityRefs.current[entry.id] = el; }}
+                        value={entry.activity}
+                        onChange={(e) => updateEntry(entry.id, "activity", e.target.value)}
+                        placeholder="Tap an idea below, or type what you did"
+                        rows={2}
+                        style={{ ...inputStyle, resize: "vertical", minHeight: 64, lineHeight: 1.45, background: WHITE }}
+                      />
+                      {issue && <div style={{ color: "#b91c1c", fontSize: "0.85rem", fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>{issue}</div>}
+
+                      {hasBlank && (
+                        <div style={{ marginTop: "0.5rem" }}>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9a3412", marginBottom: 4 }}>Fill in the blank: tap one or type it</div>
+                          <div style={chipRow}>
+                            {fillChoices.map((w) => (
+                              <button key={w} type="button" onClick={() => fillBlank(entry.id, w)} style={{ ...chip, borderColor: "#fdba74", background: "#fff7ed", color: "#9a3412" }}>{w}</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {!hasBlank && (
+                        <div style={{ marginTop: "0.55rem" }}>
+                          <div style={chipRow}>
+                            {ideas.map((idea) => (
+                              <button key={idea} type="button" onClick={() => tapPhrase(entry.id, idea)} style={chip}>
+                                + {idea.replace(/___/g, "…")}
+                              </button>
+                            ))}
+                            <button type="button" onClick={() => setSeeds((sd) => ({ ...sd, [entry.id]: (sd[entry.id] || 0) + 1 }))} style={{ ...chip, background: "none", borderStyle: "dashed", color: NAVY }}>
+                              ↻ More ideas
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    </div>
+                  );
+                })}
+
+                {triedSubmit && sameEverywhere && (
+                  <div style={{ color: "#b91c1c", fontSize: "0.88rem", fontWeight: 600, marginBottom: "0.75rem" }}>Your entries all say the same thing. Describe what you did in each time block.</div>
+                )}
+
+                <button onClick={addEntry} style={{ background: "none", border: `1.5px dashed ${NAVY}`, borderRadius: 12, color: NAVY, padding: "0.7rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", width: "100%", marginBottom: "0.5rem", fontFamily: "inherit" }}>
+                  + Add Entry
+                </button>
+              </>
+            )}
           </div>
 
           <SectionBar label="Section IV: Employee Signature" />
@@ -334,7 +439,7 @@ export default function DARForm() {
               >
                 {submitting ? "Submitting..." : "Submit DAR"}
               </button>
-              {!required && <div style={{ fontSize: "0.75rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center" }}>Officer name, date, and signature are required</div>}
+              {!required && <div style={{ fontSize: "0.8rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center", lineHeight: 1.5 }}>Still needed: {missing.join(", ")}</div>}
             </div>
           </div>
 
@@ -363,15 +468,6 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
-function activityTimePlaceholder(index: number): { from: string; to: string } {
-  const startHour = (18 + index * 2) % 24;
-  const endHour = startHour + 2;
-  const fmt = (h: number) => String(h % 24).padStart(2, "0") + "00";
-  return {
-    from: fmt(startHour),
-    to: endHour === 24 ? "2400" : fmt(endHour),
-  };
-}
 
 function Field({ label, value, onChange, placeholder, type = "text", required: req }: {
   label: string; value: string;
@@ -410,6 +506,17 @@ function CheckboxItem({ label, checked, onChange }: { label: string; checked: bo
     </label>
   );
 }
+
+const chipRow: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.4rem" };
+const chip: React.CSSProperties = {
+  border: `1.5px solid ${BORDER}`, background: WHITE, color: TEXT, borderRadius: 999,
+  padding: "0.4rem 0.75rem", fontSize: "0.84rem", fontWeight: 600, fontFamily: "inherit",
+  cursor: "pointer", textAlign: "left", lineHeight: 1.3, minHeight: 36,
+};
+const timeBox: React.CSSProperties = {
+  width: 68, padding: "0.4rem 0.3rem", border: "1px solid #d1d5db", borderRadius: 8,
+  fontSize: "0.95rem", textAlign: "center", fontFamily: "inherit", background: WHITE, color: TEXT,
+};
 
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
