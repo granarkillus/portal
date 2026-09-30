@@ -203,6 +203,7 @@ export default function Dashboard() {
               <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
                   { label: "File a Write-Up", href: "/writeup/write", color: "#b91c1c" },
+                  { label: "Time-Off Calendar", href: "/supervisor/calendar", color: NAVY },
                   { label: "Review Time-Off Requests", href: "/timeoff/requests", color: NAVY },
                   { label: "View Disciplinary Records", href: "/writeup/records", color: NAVY },
                   { label: "Generate DAR Report", href: "/dar/report", color: GREEN },

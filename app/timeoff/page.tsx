@@ -5,6 +5,7 @@ import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { newId, sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
+import { describeDates, parseRequestedDates } from "@/lib/parse-dates";
 import { buildTimeOffFormDocument, TimeOffRequest } from "./requests/timeoff-form-template";
 
 const NAVY = "#1a4480";
@@ -27,6 +28,7 @@ export default function AUSTimeOffForm() {
     daysAndDates: "",
     employeeSignature: "",
     employeeDate: "",
+    pickedDates: [] as string[],
   });
 
   const [submitted, setSubmitted] = useState(false);
@@ -51,7 +53,7 @@ export default function AUSTimeOffForm() {
   // Keep an unsent request on this phone if the tab is closed or the screen locks.
   const [queued, setQueued] = useState(false);
   const draftHasContent = !!(form.absenceType || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.employeeSignature.trim() || form.account.trim() || form.manager.trim());
-  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved })), draftHasContent && !submitted);
+  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved, pickedDates: Array.isArray(saved.pickedDates) ? saved.pickedDates : [] })), draftHasContent && !submitted);
 
   const required =
     form.employeeName && form.absenceType && form.daysAndDates && form.employeeSignature;
@@ -65,6 +67,11 @@ export default function AUSTimeOffForm() {
       ? `Other: ${form.otherType}`
       : form.absenceType;
 
+    // Real calendar dates for the supervisor calendar: the picked dates, or
+    // what we can read from the typed text (flagged if we're not sure).
+    const picked = form.pickedDates.length > 0 && form.daysAndDates === describeDates(form.pickedDates);
+    const parsed = picked ? { dates: form.pickedDates, confident: true } : parseRequestedDates(form.daysAndDates);
+
     const result = await sendOrQueue("timeoff", "time_off_requests", {
       id: newId(),
       officer_name: form.employeeName,
@@ -74,6 +81,8 @@ export default function AUSTimeOffForm() {
       absence_type: absenceType,
       reason: form.reasonForAbsence || null,
       dates_requested: form.daysAndDates,
+      requested_dates: parsed.dates.length ? parsed.dates : null,
+      dates_need_review: !parsed.confident,
       employee_signature: form.employeeSignature,
       employee_date: form.employeeDate || null,
       status: "pending",
@@ -136,7 +145,7 @@ export default function AUSTimeOffForm() {
   };
 
   const handleReset = () => {
-    setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "" });
+    setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "", pickedDates: [] });
     setSubmitted(false);
     setQueued(false);
     setError("");
@@ -187,7 +196,11 @@ export default function AUSTimeOffForm() {
             </div>
 
             <Field label="Reason For Absence" value={form.reasonForAbsence} onChange={set("reasonForAbsence")} />
-            <Field label="Day(s) and Date(s) of Absence" value={form.daysAndDates} onChange={set("daysAndDates")} placeholder="e.g. Monday, June 9, 2026" required />
+            <DatePicker
+              picked={form.pickedDates}
+              onChange={(dates) => setForm((f) => ({ ...f, pickedDates: dates, daysAndDates: describeDates(dates) }))}
+            />
+            <Field label="Day(s) and Date(s) of Absence" value={form.daysAndDates} onChange={set("daysAndDates")} placeholder="Pick dates above, or type them, e.g. Monday, June 9, 2026" required />
 
             <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "0.75rem 1rem", margin: "1.5rem 0", fontSize: "0.82rem", color: TEXT, fontStyle: "italic", fontWeight: 600 }}>
               All requests for time off must be submitted two (2) weeks in advance.
@@ -337,4 +350,61 @@ function btnStyle(bg: string): React.CSSProperties {
     letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit",
     textTransform: "uppercase", width: "100%",
   };
+}
+
+// Tap-to-pick dates: fills in "Day(s) and Date(s)" so the supervisor calendar
+// knows exactly which days are requested. Typing the dates still works.
+function DatePicker({ picked, onChange }: { picked: string[]; onChange: (dates: string[]) => void }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+
+  const add = () => {
+    if (!from) return;
+    const end = to && to >= from ? to : from;
+    const out = new Set(picked);
+    for (let t = Date.parse(`${from}T12:00:00Z`); t <= Date.parse(`${end}T12:00:00Z`) && out.size < 400; t += 86400000) {
+      out.add(new Date(t).toISOString().slice(0, 10));
+    }
+    onChange(Array.from(out).sort());
+    setFrom(""); setTo("");
+  };
+
+  const groups: string[][] = [];
+  for (const d of picked) {
+    const last = groups[groups.length - 1];
+    if (last && Date.parse(d) - Date.parse(last[last.length - 1]) === 86400000) last.push(d);
+    else groups.push([d]);
+  }
+  const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+
+  return (
+    <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.75rem" }}>
+      <Label>📅 Pick your dates <span style={{ color: "#b3261e" }}>*</span></Label>
+      <div className="stack-sm" style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.8rem", color: MUTED, marginBottom: 4 }}>First day off</div>
+          <input type="date" value={from} min={today} onChange={(e) => { setFrom(e.target.value); if (to && to < e.target.value) setTo(""); }} style={inputStyle} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: "0.8rem", color: MUTED, marginBottom: 4 }}>Last day off <span style={{ opacity: 0.8 }}>(if more than one)</span></div>
+          <input type="date" value={to} min={from || today} onChange={(e) => setTo(e.target.value)} style={inputStyle} />
+        </div>
+        <button type="button" onClick={add} disabled={!from} style={{ background: from ? NAVY : "#94a3b8", color: WHITE, border: "none", borderRadius: 12, padding: "0.75rem 1.1rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.95rem", cursor: from ? "pointer" : "not-allowed", minHeight: 48 }}>
+          Add
+        </button>
+      </div>
+      {groups.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
+          {groups.map((g) => (
+            <span key={g[0]} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: WHITE, border: `1.5px solid ${NAVY}`, color: NAVY, borderRadius: 999, padding: "0.35rem 0.5rem 0.35rem 0.8rem", fontSize: "0.88rem", fontWeight: 600 }}>
+              {g.length === 1 ? short(g[0]) : `${short(g[0])} – ${short(g[g.length - 1])}`}
+              <button type="button" aria-label="Remove" onClick={() => onChange(picked.filter((d) => !g.includes(d)))} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.95rem", padding: "0 0.2rem", minHeight: 0, lineHeight: 1 }}>✕</button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div style={{ fontSize: "0.8rem", color: MUTED, marginTop: "0.6rem" }}>Add each day or stretch of days you need off. You can add more than one.</div>
+    </div>
+  );
 }
