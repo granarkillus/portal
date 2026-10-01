@@ -7,6 +7,7 @@ import { useDraft, clearDraft } from "@/lib/drafts";
 import { newId, sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import HourSelect from "@/components/hour-select";
+import { POSTS } from "@/lib/posts";
 
 const getSupabase = () =>
   createClient(
@@ -23,8 +24,6 @@ const TEXT = "#0f172a";
 const GREEN = "#15803d";
 const RED = "#b91c1c";
 
-// Most-used posts (from past submissions), so officers can tap instead of type.
-const POSTS = ["Lofts", "Lofts Enright", "Ackert Walkway", "Greenway Walk", "West Campus", "North Campus", "South Campus", "McPherson", "Core"];
 const REASONS = ["Illness", "Family emergency", "Personal emergency", "Bereavement", "Medical appointment", "Other"];
 
 // These exact phrases are what's stored and emailed; don't reword them.
