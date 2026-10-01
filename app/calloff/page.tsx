@@ -6,6 +6,7 @@ import { getOfficer, rememberOfficer, forgetOfficer } from "@/lib/officer-memory
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { newId, sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
+import HourSelect from "@/components/hour-select";
 
 const getSupabase = () =>
   createClient(
@@ -349,14 +350,14 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
             </div>
 
             <div className="stack-sm" style={{ display: "flex", gap: "0.75rem", marginTop: "1.25rem" }}>
-              <div id="shiftStart" style={{ flex: 1 }}>
+              <div id="shiftStart" style={{ flex: 1, marginBottom: "0.75rem" }}>
                 <Label>Shift starts <Req /></Label>
-                <input type="time" value={form.shiftStart} onChange={set("shiftStart")} style={inputStyle(!!errorFor("shiftStart"))} />
+                <HourSelect ariaLabel="Shift starts" value={form.shiftStart} onChange={(v) => setForm((f) => ({ ...f, shiftStart: v }))} style={inputStyle(!!errorFor("shiftStart"))} />
                 <FieldError msg={errorFor("shiftStart")} />
               </div>
               <div style={{ flex: 1 }}>
                 <Label>Shift ends <Optional /></Label>
-                <input type="time" value={form.shiftEnd} onChange={set("shiftEnd")} style={inputStyle(false)} />
+                <HourSelect ariaLabel="Shift ends" placeholder="Pick a time (optional)" optional value={form.shiftEnd} onChange={(v) => setForm((f) => ({ ...f, shiftEnd: v }))} style={inputStyle(false)} />
               </div>
             </div>
 
