@@ -6,6 +6,7 @@ import { newDarId, rememberDar } from "@/lib/my-dars";
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
+import HourSelect from "@/components/hour-select";
 import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
 
 const NAVY = "#1a4480";
@@ -323,11 +324,11 @@ export default function DARForm() {
             <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
               <div style={{ flex: 1, marginBottom: "1rem" }}>
                 <Label>Time In (shift start)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
-                <input type="time" value={form.shiftStart} onChange={set("shiftStart")} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftStart) === null ? "#b91c1c" : "#d1d5db" }} />
+                <HourSelect ariaLabel="Time In" value={form.shiftStart} onChange={(v) => setForm((f) => ({ ...f, shiftStart: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftStart) === null ? "#b91c1c" : "#d1d5db" }} />
               </div>
               <div style={{ flex: 1, marginBottom: "1rem" }}>
                 <Label>Time Out (shift end)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
-                <input type="time" value={form.shiftEnd} onChange={set("shiftEnd")} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftEnd) === null ? "#b91c1c" : "#d1d5db" }} />
+                <HourSelect ariaLabel="Time Out" value={form.shiftEnd} onChange={(v) => setForm((f) => ({ ...f, shiftEnd: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftEnd) === null ? "#b91c1c" : "#d1d5db" }} />
               </div>
             </div>
           </div>
