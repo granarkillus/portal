@@ -7,6 +7,7 @@ import { useDraft, clearDraft } from "@/lib/drafts";
 import { sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import HourSelect from "@/components/hour-select";
+import { POSTS } from "@/lib/posts";
 import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
 
 const NAVY = "#1a4480";
@@ -308,8 +309,21 @@ export default function DARForm() {
             </Row>
             <Row>
               <Field label="Branch" value={form.branch} onChange={set("branch")} />
-              <Field label="Scheduled Shift / Post" value={form.scheduledShift} onChange={set("scheduledShift")} placeholder="e.g. Greenway Walk, Ackert, North Campus" />
             </Row>
+            <div style={{ marginBottom: "1rem" }}>
+              <Label>Scheduled Shift / Post</Label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
+                {POSTS.map((p) => {
+                  const on = form.scheduledShift.trim().toLowerCase() === p.toLowerCase();
+                  return (
+                    <button key={p} type="button" aria-pressed={on} onClick={() => setForm((f) => ({ ...f, scheduledShift: p }))} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                      {on ? "✓ " : ""}{p}
+                    </button>
+                  );
+                })}
+              </div>
+              <input value={form.scheduledShift} onChange={set("scheduledShift")} placeholder="Tap your post, or type it" style={inputStyle} />
+            </div>
             <Label>Received Items</Label>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem 1.5rem", margin: "0.5rem 0 0.5rem" }}>
               {[["receivedRadio", "Radio"], ["receivedPager", "Pager"], ["receivedKeys", "Keys"], ["receivedDetex", "Detex"]].map(([field, label]) => (
