@@ -153,3 +153,50 @@ export function shiftBlocks(start: string, end: string): { from: string; to: str
     to: i === n - 1 ? hhmm(e) : hhmm(s + (i + 1) * step),
   }));
 }
+
+/**
+ * Tidies a typed entry time into the paper form's 24-hour "HHMM".
+ * Clear cases convert directly ("10pm" -> 2200, "7:45 am" -> 0745, "1830" stays).
+ * Ambiguous ones ("745", "7:45", "7") are settled by the shift: whichever of
+ * AM/PM falls inside the shift wins. If the shift doesn't settle it, or the
+ * text isn't a time, it's returned unchanged.
+ */
+export function normalizeTime(raw: string, shiftStart: string, shiftEnd: string): string {
+  const t = raw.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!t) return raw;
+
+  // With am/pm: exact.
+  let m = t.match(/^(\d{1,2})(?:[:.]? ?(\d{2}))? ?([ap])\.? ?m?\.?$/);
+  if (m) {
+    let h = +m[1];
+    const min = m[2] ? +m[2] : 0;
+    if (h < 1 || h > 12 || min > 59) return raw;
+    if (m[3] === "a") h = h === 12 ? 0 : h;
+    else h = h === 12 ? 12 : h + 12;
+    return hhmm(h * 60 + min);
+  }
+
+  // Four digits is already military time ("0745", "1830", "2400").
+  if (/^\d{4}$/.test(t)) {
+    const h = +t.slice(0, 2), min = +t.slice(2);
+    return h <= 24 && min <= 59 ? t : raw;
+  }
+
+  // "19:45" is clear; "7:45", "745" and "7" need the shift to decide.
+  m = t.match(/^(\d{1,2})(?:[:.] ?(\d{2}))?$/) || t.match(/^(\d)(\d{2})$/);
+  if (!m) return raw;
+  const h = +m[1], min = m[2] ? +m[2] : 0;
+  if (h > 24 || min > 59) return raw;
+  if (h === 0 || h >= 13) return hhmm(h * 60 + min);
+
+  const s = toMinutes(shiftStart), e0 = toMinutes(shiftEnd);
+  if (s === null || e0 === null) return raw;
+  const e = e0 <= s ? e0 + 1440 : e0;
+  const inShift = (mins: number) => [mins, mins + 1440].some((x) => x >= s && x <= e);
+  const am = (h % 12) * 60 + min;
+  const pm = am + 720;
+  const okAm = inShift(am), okPm = inShift(pm);
+  if (okAm && !okPm) return hhmm(am);
+  if (okPm && !okAm) return hhmm(pm);
+  return raw;
+}

@@ -8,7 +8,7 @@ import { sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import HourSelect from "@/components/hour-select";
 import { POSTS } from "@/lib/posts";
-import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
+import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, normalizeTime, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
 
 const NAVY = "#1a4480";
 const SOFT_BG = "#f2f5fa";
@@ -25,6 +25,27 @@ interface ActivityEntry {
   activity: string;
   phrase?: string; // last suggestion tapped (kept on the phone only)
 }
+
+// The officer's last DAR shift, kept on this phone for "Same as last time".
+const LAST_SHIFT_KEY = "allied-last-dar-shift";
+interface LastShift { post: string; start: string; end: string }
+function readLastShift(): LastShift | null {
+  try {
+    const v = JSON.parse(localStorage.getItem(LAST_SHIFT_KEY) || "null");
+    return v && typeof v.start === "string" && typeof v.end === "string" ? v : null;
+  } catch { return null; }
+}
+
+// Dates on the DAR are MM/DD/YYYY (St. Louis time).
+function centralDate(offsetDays = 0): string {
+  const d = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Chicago" }));
+  d.setDate(d.getDate() + offsetDays);
+  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}/${d.getFullYear()}`;
+}
+const centralHour = () => +new Date().toLocaleString("en-US", { timeZone: "America/Chicago", hour: "numeric", hourCycle: "h23" });
+const mdyToIso = (d: string) => { const m = d.match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m ? `${m[3]}-${m[1]}-${m[2]}` : ""; };
+const isoToMdy = (d: string) => { const m = d.match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[2]}/${m[3]}/${m[1]}` : d; };
+const shiftLabel = (t: string) => t.replace(":", "");
 
 // "18:00" for the time pickers; older drafts stored "1800".
 const toPicker = (t: string) => /^\d{4}$/.test(t) ? `${t.slice(0, 2)}:${t.slice(2)}` : t;
@@ -136,6 +157,29 @@ export default function DARForm() {
   // Show what's missing (in red) once they've tried to submit.
   const [triedSubmit, setTriedSubmit] = useState(false);
 
+  // "Same as last time": offered, never filled in silently.
+  const [lastShift, setLastShift] = useState<LastShift | null>(null);
+  useEffect(() => { setLastShift(readLastShift()); }, []);
+  const lastShiftApplied = !!lastShift && form.shiftStart === lastShift.start && form.shiftEnd === lastShift.end && (!lastShift.post || form.scheduledShift === lastShift.post);
+  const useLastShift = () => {
+    if (!lastShift) return;
+    setForm((f) => ({ ...f, shiftStart: lastShift.start, shiftEnd: lastShift.end, scheduledShift: lastShift.post || f.scheduledShift }));
+  };
+
+  // Date: Today / Yesterday / another day.
+  const yesterday = centralDate(-1);
+  const [otherDate, setOtherDate] = useState(false);
+  const overnight = shiftReady && (toMinutes(form.shiftEnd) ?? 0) <= (toMinutes(form.shiftStart) ?? 0);
+  const suggestYesterday = overnight && form.date === today && centralHour() < 12;
+
+  // One-tap signature: confirming signs with the officer's name.
+  const signed = !!form.signature;
+  useEffect(() => {
+    // Keep the signature matching the name if they edit the name after signing.
+    setForm((f) => (f.signature && f.signature !== f.officerName.trim() ? { ...f, signature: f.officerName.trim() } : f));
+  }, [form.officerName]);
+  const [editSite, setEditSite] = useState(false);
+
   // Fill in the officer's details remembered from their last Allied form.
   useEffect(() => {
     const me = getOfficer();
@@ -164,14 +208,15 @@ export default function DARForm() {
     if (entryIssues.some(Boolean)) missing.push("fix the highlighted entries");
     if (sameEverywhere) missing.push("entries can't all say the same thing");
   }
-  if (!form.signature.trim()) missing.push("signature");
+  if (!form.signature.trim()) missing.push("tick the box to sign");
   const required = missing.length === 0;
+  const doneEntries = entries.filter((e, i) => (e.activity.trim() || e.from.trim() || e.to.trim()) && !entryIssues[i]).length;
 
   const handleSubmit = async () => {
     if (!required) {
       setTriedSubmit(true);
       const firstBad = entries.find((_, i) => entryIssues[i]);
-      const target = !shiftReady ? document.getElementById("shift-times") : firstBad ? document.getElementById(`entry-${firstBad.id}`) : null;
+      const target = !shiftReady ? document.getElementById("shift-times") : firstBad ? document.getElementById(`entry-${firstBad.id}`) : !form.signature ? document.getElementById("sign-box") : null;
       target?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
@@ -208,6 +253,8 @@ export default function DARForm() {
     setSubmittedDate(form.date);
     setSubmittedName(form.officerName);
     rememberOfficer({ name: form.officerName.trim(), post: form.scheduledShift.trim() || undefined });
+    try { localStorage.setItem(LAST_SHIFT_KEY, JSON.stringify({ post: form.scheduledShift.trim(), start: form.shiftStart, end: form.shiftEnd })); } catch { /* ignore */ }
+    setLastShift({ post: form.scheduledShift.trim(), start: form.shiftStart, end: form.shiftEnd });
     setSubmitted(true);
     setSubmitting(false);
   };
@@ -235,7 +282,13 @@ export default function DARForm() {
     ]);
     setSubmitted(false);
     setQueued(false);
+    setOtherDate(false);
+    setEditSite(false);
+    setTriedSubmit(false);
     setError("");
+    // Keep the officer's name for the next DAR.
+    const me = getOfficer();
+    if (me.name) setForm((f) => ({ ...f, officerName: me.name || "" }));
   };
 
   const startOver = () => { clearDraft("dar"); handleReset(); const me = getOfficer(); if (me.name) setForm((f) => ({ ...f, officerName: me.name || "", scheduledShift: me.post || "" })); };
@@ -275,7 +328,7 @@ export default function DARForm() {
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
 
         <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -303,13 +356,41 @@ export default function DARForm() {
           <SectionBar label="Section I: Employee Information" />
           <div style={{ padding: "1.25rem 2rem 0" }}>
             <Field label="Officer on Duty" value={form.officerName} onChange={set("officerName")} required placeholder="Full legal name" />
-            <Row>
-              <Field label="Client / Site" value={form.clientSite} onChange={set("clientSite")} />
-              <Field label="Today's Date" value={form.date} onChange={set("date")} type="text" placeholder="MM/DD/YYYY" required />
-            </Row>
-            <Row>
-              <Field label="Branch" value={form.branch} onChange={set("branch")} />
-            </Row>
+            <div style={{ marginBottom: "1rem" }}>
+              <Label>Date of shift<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
+              <div style={chipRow}>
+                {[["Today", today], ["Yesterday", yesterday]].map(([label, value]) => {
+                  const on = !otherDate && form.date === value;
+                  return (
+                    <button key={label} type="button" aria-pressed={on} onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: value })); }} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                      {on ? "✓ " : ""}{label}
+                    </button>
+                  );
+                })}
+                {(() => {
+                  const on = otherDate || (form.date !== today && form.date !== yesterday);
+                  return (
+                    <button type="button" aria-pressed={on} onClick={() => setOtherDate(true)} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                      {on ? `✓ ${form.date || "Another day"}` : "Another day"}
+                    </button>
+                  );
+                })()}
+              </div>
+              {(otherDate || (form.date !== today && form.date !== yesterday)) && (
+                <input type="date" aria-label="Date of shift" value={mdyToIso(form.date)} max={mdyToIso(today)} onChange={(e) => setForm((f) => ({ ...f, date: isoToMdy(e.target.value) }))} style={{ ...inputStyle, marginTop: "0.5rem" }} />
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.88rem", color: MUTED, marginBottom: "1rem" }}>
+              <span>📍 {form.clientSite || "—"} · {form.branch || "—"}</span>
+              <button type="button" onClick={() => setEditSite((v) => !v)} style={{ background: "none", border: "none", padding: 0, minHeight: 0, color: NAVY, fontWeight: 700, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem" }}>{editSite ? "Done" : "Edit"}</button>
+            </div>
+            {editSite && (
+              <Row>
+                <Field label="Client / Site" value={form.clientSite} onChange={set("clientSite")} />
+                <Field label="Branch" value={form.branch} onChange={set("branch")} />
+              </Row>
+            )}
             <div style={{ marginBottom: "1rem" }}>
               <Label>Scheduled Shift / Post</Label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
@@ -335,6 +416,16 @@ export default function DARForm() {
           <SectionBar label="Section II: Record of Hours Worked" />
           <div id="shift-times" style={{ padding: "1.25rem 2rem 0" }}>
             <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "0.75rem" }}>Start here: your activity times fill in from your shift.</div>
+            {lastShift && !lastShiftApplied && (
+              <button type="button" onClick={useLastShift} style={{ display: "flex", alignItems: "center", gap: "0.6rem", width: "100%", textAlign: "left", background: "#eaf1fb", border: `1.5px solid ${NAVY}`, borderRadius: 12, padding: "0.75rem 0.9rem", marginBottom: "1rem", cursor: "pointer", fontFamily: "inherit", color: NAVY, minHeight: 0 }}>
+                <span style={{ fontSize: "1.1rem" }}>↺</span>
+                <span style={{ flex: 1 }}>
+                  <span style={{ display: "block", fontWeight: 700, fontSize: "0.95rem" }}>Same as last time</span>
+                  <span style={{ display: "block", fontSize: "0.85rem", color: MUTED }}>{lastShift.post ? `${lastShift.post} · ` : ""}{shiftLabel(lastShift.start)}–{shiftLabel(lastShift.end)}</span>
+                </span>
+                <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Use ›</span>
+              </button>
+            )}
             <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
               <div style={{ flex: 1, marginBottom: "1rem" }}>
                 <Label>Time In (shift start)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
@@ -346,6 +437,13 @@ export default function DARForm() {
               </div>
             </div>
           </div>
+
+          {suggestYesterday && (
+            <div style={{ margin: "0 2rem", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center", fontSize: "0.9rem", color: "#9a3412" }}>
+              <span style={{ flex: 1 }}>🌙 Overnight shift: it started yesterday. Use yesterday&apos;s date?</span>
+              <button type="button" onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: yesterday })); }} style={{ background: "#9a3412", color: WHITE, border: "none", borderRadius: 999, padding: "0.4rem 0.85rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.85rem", cursor: "pointer", minHeight: 0, whiteSpace: "nowrap" }}>Use {yesterday.slice(0, 5)}</button>
+            </div>
+          )}
 
           <SectionBar label="Section III: Activity Details" />
           <div style={{ padding: "1.25rem 2rem 0" }}>
@@ -375,9 +473,9 @@ export default function DARForm() {
                     <div key={entry.id} id={`entry-${entry.id}`} style={{ background: SOFT_BG, border: `1.5px solid ${issue ? "#fca5a5" : BORDER}`, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
                         <span style={{ fontSize: "0.75rem", fontWeight: 800, color: NAVY, textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry {index + 1}</span>
-                        <input aria-label="From" value={entry.from} onChange={(e) => updateEntry(entry.id, "from", e.target.value)} placeholder="From" inputMode="numeric" style={timeBox} />
+                        <input aria-label="From" value={entry.from} onChange={(e) => updateEntry(entry.id, "from", e.target.value)} onBlur={(e) => { const v = normalizeTime(e.target.value, form.shiftStart, form.shiftEnd); if (v !== e.target.value) updateEntry(entry.id, "from", v); }} placeholder="From" inputMode="numeric" style={timeBox} />
                         <span style={{ color: MUTED }}>–</span>
-                        <input aria-label="To" value={entry.to} onChange={(e) => updateEntry(entry.id, "to", e.target.value)} placeholder="To" inputMode="numeric" style={timeBox} />
+                        <input aria-label="To" value={entry.to} onChange={(e) => updateEntry(entry.id, "to", e.target.value)} onBlur={(e) => { const v = normalizeTime(e.target.value, form.shiftStart, form.shiftEnd); if (v !== e.target.value) updateEntry(entry.id, "to", v); }} placeholder="To" inputMode="numeric" style={timeBox} />
                         <div style={{ flex: 1 }} />
                         {entries.length > MIN_ENTRIES && (
                           <button type="button" onClick={() => removeEntry(entry.id)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.8rem", padding: "2px 4px", minHeight: 0 }}>Remove</button>
@@ -440,27 +538,46 @@ export default function DARForm() {
             <div style={{ fontSize: "0.78rem", color: TEXT, lineHeight: 1.65, marginBottom: "1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
               By your signature, you acknowledge that the information on this DAR is a true and accurate record of your time and account activity today.
             </div>
-            <Field label="Signature (type full name)" value={form.signature} onChange={set("signature")} placeholder="Full legal name" required />
+            <label id="sign-box" style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer", border: `1.5px solid ${triedSubmit && !signed ? "#b91c1c" : signed ? NAVY : BORDER}`, background: signed ? "#eaf1fb" : WHITE, borderRadius: 12, padding: "1rem", marginBottom: "1rem" }}>
+              <input type="checkbox" checked={signed} disabled={!form.officerName.trim()} onChange={(e) => setForm((f) => ({ ...f, signature: e.target.checked ? f.officerName.trim() : "" }))} style={{ width: 24, height: 24, marginTop: 1, accentColor: NAVY, flexShrink: 0 }} />
+              <span style={{ fontSize: "0.95rem", color: TEXT, lineHeight: 1.5 }}>
+                {form.officerName.trim() ? <>Sign as <strong>{form.officerName.trim()}</strong></> : <span style={{ color: MUTED }}>Enter your name at the top to sign</span>}
+                {signed && <span style={{ display: "block", marginTop: 4, color: MUTED, fontSize: "0.85rem" }}>Signed: <em style={{ fontFamily: "Georgia, serif", color: TEXT }}>{form.signature}</em></span>}
+              </span>
+            </label>
             {error && (
               <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
                 {error}
               </div>
             )}
-            <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                style={{ ...btnStyle(!submitting ? GREEN : "#9ca3af"), cursor: !submitting ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                {submitting ? "Submitting..." : "Submit DAR"}
-              </button>
-              {!required && <div style={{ fontSize: "0.8rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center", lineHeight: 1.5 }}>Still needed: {missing.join(", ")}</div>}
-            </div>
           </div>
 
           <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
             Allied Universal Security Services &nbsp;·&nbsp; Washington University &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes.
           </div>
+        </div>
+
+        <div style={{ position: "sticky", bottom: 0, background: "rgba(255,255,255,0.97)", borderTop: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom))", backdropFilter: "blur(6px)", zIndex: 5 }}>
+          {shiftReady && (
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.5rem" }}>
+              <div style={{ flex: 1, height: 6, background: "#e5eaf1", borderRadius: 99, overflow: "hidden" }}>
+                <div style={{ width: `${Math.min(100, (doneEntries / MIN_ENTRIES) * 100)}%`, height: "100%", background: doneEntries >= MIN_ENTRIES ? GREEN : NAVY, transition: "width 0.2s" }} />
+              </div>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: doneEntries >= MIN_ENTRIES ? GREEN : MUTED, whiteSpace: "nowrap" }}>
+                {Math.min(doneEntries, entries.length)} of {Math.max(MIN_ENTRIES, entries.length)} entries done
+              </span>
+            </div>
+          )}
+          {!required && triedSubmit && (
+            <div style={{ fontSize: "0.82rem", color: "#b91c1c", fontWeight: 600, textAlign: "center", lineHeight: 1.4, marginBottom: "0.5rem" }}>Still needed: {missing.join(", ")}</div>
+          )}
+          <button
+            onClick={handleSubmit}
+            disabled={submitting}
+            style={{ width: "100%", minHeight: 52, background: submitting ? "#94a3b8" : required ? GREEN : NAVY, color: WHITE, border: "none", borderRadius: 12, fontSize: "1.02rem", fontWeight: 700, fontFamily: "inherit", cursor: submitting ? "not-allowed" : "pointer" }}
+          >
+            {submitting ? "Submitting…" : "Submit DAR"}
+          </button>
         </div>
       </div>
     </div>
