@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildDisciplinaryFormDocument, DisciplinaryNotice } from "./disciplinary-form-template";
+import SupervisorHeader, { StatStrip, headerButton } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -141,37 +142,15 @@ export default function ViewPage() {
   const isPending = !notice?.signature;
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 780, margin: "0 auto" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", borderRadius: "4px 4px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services · Supervisor Portal</div>
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-            <a href="/supervisor/dashboard" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard
-            </a>
-            <a href="/writeup/records" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem", textDecoration: "none" }}>← All Records</a>
-            {isPending && (
-              <a href={`/writeup/edit?id=${notice?.id}`} style={{ ...btnStyle("transparent"), border: "1px solid rgba(255,255,255,0.4)", color: WHITE, padding: "0.45rem 1.25rem", width: "auto", fontSize: "0.78rem", display: "inline-block", textDecoration: "none", textAlign: "center" as const }}>
-                Edit
-              </a>
-            )}
-            <button onClick={generatePDF} style={{ ...btnStyle(GREEN), padding: "0.45rem 1.25rem", width: "auto", fontSize: "0.78rem" }}>
-              Download PDF
-            </button>
-          </div>
-        </div>
+        <SupervisorHeader title="Write-up" active="writeups" actions={<><a href="/writeup/records" style={headerButton()}>← All write-ups</a>{isPending && <a href={`/writeup/edit?id=${notice?.id}`} style={headerButton()}>Edit</a>}<button type="button" onClick={generatePDF} style={headerButton(true)}>Download PDF</button></>} />
 
         {notice && (
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 4px 4px" }}>
 
-            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 2rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
+            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
               {[["Employee", notice.officer_name], ["Position", notice.position], ["Site", notice.client_site], ["Supervisor", notice.supervisor], ["Date", formatDate(notice.notice_date)], ["Action", notice.action_type]].map(([label, val]) => val ? (
                 <div key={label} style={{ fontSize: "0.78rem" }}>
                   <span style={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "0.05em", color: MUTED }}>{label}: </span>
@@ -196,7 +175,7 @@ export default function ViewPage() {
             {notice.expectations && (
               <div>
                 <SectionBar label="4. Expectation – Future Behavior Expected" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT }}>
+                <div style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT }}>
                   {notice.expectations}
                   <div style={{ fontSize: "0.78rem", fontStyle: "italic", fontWeight: 600, background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.6rem 1rem", marginTop: "0.75rem" }}>
                     NOTE: Failure to correct the behavior/performance above may result in further discipline, up to and including termination of employment.
@@ -208,14 +187,14 @@ export default function ViewPage() {
             {notice.action_type && <Section label="6. Documentation of Corrective Action" content={notice.action_type} bold />}
 
             <SectionBar label="Supervisor Signature" />
-            <div style={{ padding: "1rem 2rem", display: "flex", gap: "1.5rem" }}>
+            <div style={{ padding: "1rem 1.25rem", display: "flex", gap: "1.5rem" }}>
               <SigBlock label="Supervisor Signature" value={notice.supervisor_signature} />
               <SigBlock label="Date Signed" value={formatDate(notice.supervisor_date)} narrow />
               {notice.witness_name && <SigBlock label="Witness" value={notice.witness_name} />}
             </div>
 
             <SectionBar label="7. Acknowledgement – Employee Response" />
-            <div style={{ padding: "1rem 2rem" }}>
+            <div style={{ padding: "1rem 1.25rem" }}>
               {notice.signature === "REFUSED TO SIGN" ? (
                 <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "3px solid #b91c1c", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#b91c1c", fontWeight: 700 }}>
                   Security Professional refused to sign this disciplinary notice. Record completed by supervisor.
@@ -333,7 +312,7 @@ export default function ViewPage() {
               )}
             </div>
 
-            <div style={{ padding: "1.5rem 2rem", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+            <div style={{ padding: "1.5rem 1.25rem", borderTop: `1px solid ${BORDER}`, display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
               <button onClick={generatePDF} style={{ ...btnStyle(NAVY), flex: 1 }}>
                 Download Complete PDF
               </button>
@@ -367,14 +346,14 @@ export default function ViewPage() {
 }
 
 function SectionBar({ label }: { label: string }) {
-  return <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>{label}</div>;
+  return <div style={{ margin: "1.75rem 1.25rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>{label}</div>;
 }
 
 function Section({ label, content, bold }: { label: string; content: string; bold?: boolean }) {
   return (
     <div>
       <SectionBar label={label} />
-      <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", lineHeight: 1.7, color: "#1a1a2e", fontWeight: bold ? 700 : 400 }}>{content}</div>
+      <div style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", lineHeight: 1.7, color: "#1a1a2e", fontWeight: bold ? 700 : 400 }}>{content}</div>
     </div>
   );
 }
@@ -389,5 +368,5 @@ function SigBlock({ label, value, narrow }: { label: string; value: string; narr
 }
 
 function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
+  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
 }

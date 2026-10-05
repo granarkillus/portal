@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
+import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -36,6 +37,9 @@ export default function Dashboard() {
   const [stats, setStats] = useState<Stats>({ pendingTimeOff: 0, recentCallOffs: 0, pendingDisciplinary: 0, pendingCallOffReview: 0, darsTotal: 0, callOffsTotal: 0, unexcusedCallOffs: 0 });
   const [recent, setRecent] = useState<RecentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [offToday, setOffToday] = useState<{ id: string; officer_name: string; status: string }[]>([]);
+  const [calloffsToday, setCalloffsToday] = useState<{ id: string; officer_name: string; post: string; shift_start: string }[]>([]);
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
   const formatTime = (iso: string) => {
     if (!iso) return "";
@@ -65,7 +69,13 @@ export default function Dashboard() {
       supabase.from("calloff_submissions").select("id", { count: "exact" }),
       supabase.from("calloff_submissions").select("id", { count: "exact" }).eq("excusal_status", "unexcused"),
       supabase.from("calloff_submissions").select("id", { count: "exact" }).or("excusal_status.is.null,excusal_status.eq.pending"),
-    ]).then(([timeOff, callOffs, disciplinary, toCount, coCount, discCount, darTotal, coTotal, unexcused, pendingReview]) => {
+      supabase.from("time_off_requests").select("id, officer_name, status").contains("requested_dates", [todayStr]).neq("status", "rejected"),
+      supabase.from("calloff_submissions").select("id, officer_name, post, shift_start").eq("shift_date", todayStr).order("shift_start"),
+    ]).then(([timeOff, callOffs, disciplinary, toCount, coCount, discCount, darTotal, coTotal, unexcused, pendingReview, offT, coT]) => {
+      // Same officer can have duplicate requests; show each name once.
+      const seen = new Set<string>();
+      setOffToday(((offT.data || []) as { id: string; officer_name: string; status: string }[]).filter((r) => { const k = r.officer_name.toLowerCase().replace(/[^a-z]/g, ""); if (seen.has(k)) return false; seen.add(k); return true; }));
+      setCalloffsToday((coT.data || []) as { id: string; officer_name: string; post: string; shift_start: string }[]);
       setStats({
         pendingTimeOff: toCount.count || 0,
         recentCallOffs: coCount.count || 0,
@@ -94,82 +104,84 @@ export default function Dashboard() {
   };
 
   const typeConfig: Record<string, { label: string; color: string; bg: string; link: (id: string) => string }> = {
-    "time-off": { label: "Time Off", color: NAVY, bg: "#eaf1fb", link: () => `/timeoff/requests` },
-    "calloff": { label: "Call Off", color: "#92400e", bg: "#fff3cd", link: () => `/supervisor/calloffs` },
-    "disciplinary": { label: "Disciplinary", color: "#b91c1c", bg: "#fef2f2", link: () => `/writeup/records` },
+    "time-off": { label: "Time off", color: NAVY, bg: "#eaf1fb", link: () => `/timeoff/requests` },
+    "calloff": { label: "Call-off", color: "#92400e", bg: "#fff3cd", link: () => `/supervisor/calloffs` },
+    "disciplinary": { label: "Write-up", color: "#b91c1c", bg: "#fef2f2", link: () => `/writeup/records` },
   };
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)" }}>
 
-      <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "0.9rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
+      <SupervisorHeader title="Dashboard" active="dashboard" right={<button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 999, padding: "0.3rem 0.75rem", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 0, whiteSpace: "nowrap", flexShrink: 0 }}>Sign out</button>} rounded={false} />
+
+      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1rem 0.75rem 2rem" }}>
+
+        {/* Today at a glance */}
+        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1rem 1.1rem", marginBottom: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.75rem" }}>
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>Today</div>
+            <div style={{ fontSize: "0.85rem", color: MUTED }}>{new Date(`${todayStr}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>Supervisor Portal · Washington University</div>
+          <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <a href="/supervisor/calendar" style={{ textDecoration: "none", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: NAVY, marginBottom: 6 }}>Off today ({loading ? "…" : offToday.length}) ›</div>
+              {loading ? <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading…</div> : offToday.length === 0 ? (
+                <div style={{ color: MUTED, fontSize: "0.88rem" }}>Nobody has time off today.</div>
+              ) : offToday.map((r) => (
+                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: TEXT, padding: "2px 0" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: r.status === "approved" ? "#16a34a" : "#e0a300", flexShrink: 0 }} />
+                  {r.officer_name}
+                  <span style={{ color: MUTED, fontSize: "0.8rem" }}>{r.status === "approved" ? "approved" : "pending"}</span>
+                </div>
+              ))}
+            </a>
+            <a href="/supervisor/calloffs" style={{ textDecoration: "none", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Called off today ({loading ? "…" : calloffsToday.length}) ›</div>
+              {loading ? <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading…</div> : calloffsToday.length === 0 ? (
+                <div style={{ color: MUTED, fontSize: "0.88rem" }}>No call-offs for today.</div>
+              ) : calloffsToday.map((r) => (
+                <div key={r.id} style={{ fontSize: "0.92rem", color: TEXT, padding: "2px 0" }}>
+                  {r.officer_name} <span style={{ color: MUTED, fontSize: "0.8rem" }}>· {r.post}{r.shift_start ? ` · ${r.shift_start.replace(":", "")}` : ""}</span>
+                </div>
+              ))}
+            </a>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <a href="/supervisor/dashboard" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            Home
-          </a>
-          <div style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.78rem" }}>|</div>
-          <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem" }}>{user?.email}</div>
-          <button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: WHITE, borderRadius: 12, padding: "0.3rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit" }}>
-            Sign Out
-          </button>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2rem 1rem" }}>
-
-        {/* Top stats row */}
-        <div className="grid-4" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem", marginBottom: "1rem" }}>
+        {/* Pending counts */}
+        <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
           {[
-            { label: "Pending Time-Off", value: stats.pendingTimeOff, color: NAVY, link: "/timeoff/requests" },
-            { label: "Call-Offs (7 days)", value: stats.recentCallOffs, color: "#92400e", link: "/supervisor/calloffs" },
-            { label: "Pending Acknowledgements", value: stats.pendingDisciplinary, color: "#b91c1c", link: "/writeup/records" },
-            { label: "Pending Call-Off Review", value: stats.pendingCallOffReview, color: "#92400e", link: "/supervisor/calloffs" },
+            { label: "Time-off to approve", value: stats.pendingTimeOff, color: NAVY, link: "/timeoff/requests" },
+            { label: "Call-offs to review", value: stats.pendingCallOffReview, color: "#92400e", link: "/supervisor/calloffs" },
+            { label: "Write-ups awaiting signature", value: stats.pendingDisciplinary, color: "#b91c1c", link: "/writeup/records" },
           ].map((stat) => (
-            <a key={stat.label} href={stat.link} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: `3px solid ${stat.color}`, borderRadius: 12, padding: "1.25rem 1.5rem", textDecoration: "none", display: "block", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-              <div style={{ fontSize: "2rem", fontWeight: 800, color: stat.color, lineHeight: 1 }}>{loading ? "—" : stat.value}</div>
-              <div style={{ fontSize: "0.75rem", color: MUTED, marginTop: 4, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>{stat.label}</div>
+            <a key={stat.label} href={stat.link} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "0.9rem 1rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.85rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "1.7rem", fontWeight: 800, color: !loading && stat.value === 0 ? "#94a3b8" : stat.color, lineHeight: 1, minWidth: 28 }}>{loading ? "—" : stat.value}</div>
+              <div style={{ flex: 1, fontSize: "0.92rem", color: TEXT, fontWeight: 600, lineHeight: 1.3 }}>{stat.label}</div>
+              <div style={{ color: MUTED }}>›</div>
             </a>
           ))}
         </div>
 
-        {/* Monthly stats row */}
-        <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-          <a href="/dar/report" style={{ background: WHITE, border: `1px solid ${BORDER}`, borderLeft: `4px solid ${GREEN}`, borderRadius: 12, padding: "1rem 1.5rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: "1.75rem" }}>📋</div>
-            <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 800, color: GREEN, lineHeight: 1 }}>{loading ? "—" : stats.darsTotal}</div>
-              <div style={{ fontSize: "0.75rem", color: MUTED, marginTop: 2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>DARs — Total</div>
-            </div>
-          </a>
-          <a href="/supervisor/calloffs" style={{ background: WHITE, border: `1px solid ${BORDER}`, borderLeft: `4px solid #92400e`, borderRadius: 12, padding: "1rem 1.5rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: "1.75rem" }}>📞</div>
-            <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#92400e", lineHeight: 1 }}>{loading ? "—" : stats.callOffsTotal}</div>
-              <div style={{ fontSize: "0.75rem", color: MUTED, marginTop: 2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Call-Offs — Total</div>
-            </div>
-          </a>
-          <a href="/supervisor/calloffs" style={{ background: WHITE, border: `1px solid ${BORDER}`, borderLeft: `4px solid #b91c1c`, borderRadius: 12, padding: "1rem 1.5rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-            <div style={{ fontSize: "1.75rem" }}>⚠️</div>
-            <div>
-              <div style={{ fontSize: "1.75rem", fontWeight: 800, color: "#b91c1c", lineHeight: 1 }}>{loading ? "—" : stats.unexcusedCallOffs}</div>
-              <div style={{ fontSize: "0.75rem", color: MUTED, marginTop: 2, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>Unexcused — All Time</div>
-            </div>
-          </a>
+        {/* Totals */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.25rem" }}>
+          {[
+            ["DARs (all time)", stats.darsTotal, "/dar/report"],
+            ["Call-offs (7 days)", stats.recentCallOffs, "/supervisor/calloffs"],
+            ["Call-offs (all time)", stats.callOffsTotal, "/supervisor/calloffs"],
+            ["Unexcused (all time)", stats.unexcusedCallOffs, "/supervisor/calloffs"],
+          ].map(([label, value, href]) => (
+            <a key={label as string} href={href as string} style={{ textDecoration: "none", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "0.35rem 0.85rem", display: "flex", alignItems: "baseline", gap: 6 }}>
+              <span style={{ fontWeight: 800, color: TEXT }}>{loading ? "—" : value}</span>
+              <span style={{ fontSize: "0.82rem", color: MUTED, fontWeight: 600 }}>{label}</span>
+            </a>
+          ))}
         </div>
 
         <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
 
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recent Activity</span>
-            </div>
+            <div style={{ padding: "0.85rem 1.1rem 0.5rem", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Recent activity</div>
             {loading ? (
               <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
             ) : recent.length === 0 ? (
@@ -182,7 +194,7 @@ export default function Dashboard() {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: 2 }}>
-                          <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: config.bg, color: config.color, textTransform: "uppercase", letterSpacing: "0.04em" }}>{config.label}</span>
+                          <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: config.bg, color: config.color, textTransform: "capitalize", letterSpacing: "0.04em" }}>{config.label}</span>
                           <span style={{ fontWeight: 700, fontSize: "0.85rem", color: TEXT }}>{item.name}</span>
                         </div>
                         <div style={{ fontSize: "0.76rem", color: MUTED }}>{item.detail}</div>
@@ -197,17 +209,15 @@ export default function Dashboard() {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-                <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Quick Actions</span>
-              </div>
+              <div style={{ padding: "0.85rem 1.1rem 0", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Quick actions</div>
               <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
-                  { label: "File a Write-Up", href: "/writeup/write", color: "#b91c1c" },
-                  { label: "Time-Off Calendar", href: "/supervisor/calendar", color: NAVY },
-                  { label: "Review Time-Off Requests", href: "/timeoff/requests", color: NAVY },
-                  { label: "View Disciplinary Records", href: "/writeup/records", color: NAVY },
-                  { label: "Generate DAR Report", href: "/dar/report", color: GREEN },
-                  { label: "Call-Off History", href: "/supervisor/calloffs", color: "#92400e" },
+                  { label: "File a write-up", href: "/writeup/write", color: "#b91c1c" },
+                  { label: "Time-off calendar", href: "/supervisor/calendar", color: NAVY },
+                  { label: "Review time-off requests", href: "/timeoff/requests", color: NAVY },
+                  { label: "View write-ups", href: "/writeup/records", color: NAVY },
+                  { label: "DAR reports", href: "/dar/report", color: GREEN },
+                  { label: "Call-off history", href: "/supervisor/calloffs", color: "#92400e" },
                 ].map((link) => (
                   <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0.85rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.85rem", fontWeight: 600, color: link.color }}>
                     {link.label}
@@ -220,15 +230,13 @@ export default function Dashboard() {
             </div>
 
             <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-                <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Employee Forms</span>
-              </div>
+              <div style={{ padding: "0.85rem 1.1rem 0", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Officer forms</div>
               <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                 {[
-                  { label: "Time-Off Request Form", href: "/timeoff" },
+                  { label: "Time-off request", href: "/timeoff" },
                   { label: "Daily Activity Report", href: "/dar" },
-                  { label: "Call-Off Notice", href: "/calloff" },
-                  { label: "Disciplinary Response", href: "/writeup" },
+                  { label: "Call-off", href: "/calloff" },
+                  { label: "Write-up response", href: "/writeup" },
                 ].map((link) => (
                   <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0.85rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.85rem", fontWeight: 600, color: MUTED }}>
                     {link.label}

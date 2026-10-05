@@ -7,6 +7,7 @@ import { useDraft, clearDraft } from "@/lib/drafts";
 import { sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import HourSelect from "@/components/hour-select";
+import { DoneCard, outlineButton } from "@/components/ui";
 import { POSTS } from "@/lib/posts";
 import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, normalizeTime, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
 
@@ -295,36 +296,21 @@ export default function DARForm() {
 
   if (submitted) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-        <div style={{ maxWidth: 480, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
-          <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem" }}>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>There for you.</div>
-          </div>
-          <div style={{ padding: "2.5rem 2rem" }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>{queued ? "DAR Saved" : "DAR Submitted"}</div>
-            <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-              {queued
-                ? <>No signal right now, so your DAR for {submittedDate || "today"} is saved on this phone. It will send automatically when you&apos;re back online. Just open this app again if it hasn&apos;t sent.</>
-                : <>Your Daily Activity Report for {submittedDate || "today"} has been recorded.</>}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-              <button onClick={handleReset} style={btnStyle(NAVY)}>Submit Another DAR</button>
-              <a href="/dar/my-dars" style={btnOutlineStyle(NAVY)}>View My Recent DARs</a>
-              <a href="/forms" style={btnOutlineStyle(MUTED)}>Go to Officer Portal</a>
-            </div>
-          </div>
+      <DoneCard title={queued ? "DAR saved" : "DAR submitted"} tone={queued ? "wait" : "ok"}>
+        <div style={{ color: MUTED, fontSize: "0.95rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
+          {queued
+            ? <>No signal right now, so your DAR for {submittedDate || "today"} is saved on this phone. It will send automatically when you&apos;re back online. Just open this app again if it hasn&apos;t sent.</>
+            : <>Your Daily Activity Report for {submittedDate || "today"} has been recorded.</>}
         </div>
-      </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <a href="/forms" style={{ ...outlineButton, background: NAVY, color: WHITE }}>Done</a>
+          <a href="/dar/my-dars" style={outlineButton}>View my recent DARs</a>
+          <button type="button" onClick={handleReset} style={{ ...outlineButton, color: MUTED, borderColor: BORDER }}>Submit another DAR</button>
+        </div>
+      </DoneCard>
     );
   }
+
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
@@ -642,18 +628,18 @@ const inputStyle: React.CSSProperties = {
 function btnStyle(bg: string): React.CSSProperties {
   return {
     background: bg, color: WHITE, border: "none", borderRadius: 12,
-    padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700,
-    letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit",
-    textTransform: "uppercase", width: "100%",
+    padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700,
+    cursor: "pointer", fontFamily: "inherit",
+    width: "100%",
   };
 }
 
 function btnOutlineStyle(color: string): React.CSSProperties {
   return {
     background: "none", color: color, border: `1.5px solid ${color}`, borderRadius: 12,
-    padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700,
-    letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit",
-    textTransform: "uppercase", width: "100%", textAlign: "center" as const,
+    padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700,
+    cursor: "pointer", fontFamily: "inherit",
+    width: "100%", textAlign: "center" as const,
     textDecoration: "none", display: "block", boxSizing: "border-box",
   };
 }

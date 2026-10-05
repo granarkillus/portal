@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
+import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -105,7 +106,7 @@ export default function CallOffRecordsPage() {
     };
     const style = styles[s] || styles.pending;
     return (
-      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: style.bg, color: style.color, border: `1px solid ${style.border}`, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>
+      <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: style.bg, color: style.color, border: `1px solid ${style.border}`, textTransform: "capitalize" as const, letterSpacing: "0.04em" }}>
         {style.label}
       </span>
     );
@@ -133,44 +134,14 @@ export default function CallOffRecordsPage() {
   const unexcused = records.filter((r) => r.excusal_status === "unexcused").length;
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", borderRadius: "4px 4px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services · Supervisor Portal</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-            <a href="/supervisor/dashboard" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard
-            </a>
-            <div>
-              <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700 }}>Call-Off Records</div>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Washington University</div>
-            </div>
-          </div>
-        </div>
+        <SupervisorHeader title="Call-offs" active="calloffs" />
 
-        <div style={{ background: DARK, padding: "0.75rem 2rem", display: "flex", gap: "2rem", flexWrap: "wrap", alignItems: "center" }}>
-          {[
-            ["Total", records.length],
-            ["Pending Review", pendingReview],
-            ["Unexcused", unexcused],
-            ["< 4 Hour Notice", less4],
-            ["With Documentation", withDocs],
-          ].map(([label, val]) => (
-            <div key={label as string}>
-              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-              <div style={{ color: label === "Unexcused" ? "#fca5a5" : label === "Pending Review" ? "#fcd34d" : WHITE, fontSize: "1.1rem", fontWeight: 700 }}>{val}</div>
-            </div>
-          ))}
-        </div>
+        <StatStrip items={[["Total", records.length], ["Pending review", pendingReview, "#8a5a00"], ["Unexcused", unexcused, "#a61b1b"], ["Under 4 hr notice", less4], ["With documents", withDocs]]} />
 
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 2rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer, post, or reason..."
             style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.85rem", color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit" }} />
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
@@ -194,15 +165,15 @@ export default function CallOffRecordsPage() {
 
             return (
               <div key={r.id} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none" }}>
-                <div onClick={() => setExpanded(isExpanded ? null : r.id)} style={{ padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", cursor: "pointer" }}>
+                <div onClick={() => setExpanded(isExpanded ? null : r.id)} style={{ padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap", cursor: "pointer" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: 4, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
                       {excusalBadge(excusalStatus)}
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: isLess4 ? "#fef2f2" : "#e8f5e9", color: isLess4 ? "#b91c1c" : GREEN, border: `1px solid ${isLess4 ? "#fca5a5" : "#a5d6a7"}`, textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: isLess4 ? "#fef2f2" : "#e8f5e9", color: isLess4 ? "#b91c1c" : GREEN, border: `1px solid ${isLess4 ? "#fca5a5" : "#a5d6a7"}`, textTransform: "capitalize" as const, letterSpacing: "0.04em" }}>
                         {isLess4 ? "< 4hr Notice" : "4+ hr Notice"}
                       </span>
-                      {r.document_url && <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: `1px solid #c3d4e8`, textTransform: "uppercase" as const }}>Doc Attached</span>}
+                      {r.document_url && <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: `1px solid #c3d4e8`, textTransform: "capitalize" as const }}>Doc Attached</span>}
                     </div>
                     <div style={{ fontSize: "0.78rem", color: MUTED }}>{r.post} &nbsp;·&nbsp; {formatDate(r.shift_date)}{r.shift_start && ` @ ${r.shift_start}`}{r.shift_end && ` – ${r.shift_end}`} &nbsp;·&nbsp; {r.reason}</div>
                     <div style={{ fontSize: "0.72rem", color: MUTED, marginTop: 2 }}>Submitted: {formatDateTime(r.submitted_at)}</div>
@@ -258,7 +229,7 @@ export default function CallOffRecordsPage() {
 
                     {r.document_url && (
                       <div style={{ marginTop: "0.75rem" }}>
-                        <a href="#" onClick={(e) => { e.preventDefault(); openDocument(r.document_url); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: NAVY, color: WHITE, borderRadius: 12, padding: "0.45rem 1rem", fontSize: "0.78rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase" as const, letterSpacing: "0.04em" }}>
+                        <a href="#" onClick={(e) => { e.preventDefault(); openDocument(r.document_url); }} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: NAVY, color: WHITE, borderRadius: 12, padding: "0.45rem 1rem", fontSize: "0.78rem", fontWeight: 700, textDecoration: "none" }}>
                           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           View Documentation
                         </a>

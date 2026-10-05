@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { parseRequestedDates } from "@/lib/parse-dates";
+import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const SOFT_BG = "#f2f5fa";
@@ -148,19 +149,7 @@ export default function TimeOffCalendar() {
       `}</style>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem", borderRadius: "16px 16px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: WHITE, fontSize: "1.35rem", fontWeight: 700, marginTop: 6 }}>Time-Off Calendar</div>
-            <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.85rem", marginTop: 2 }}>Every request, whatever its status</div>
-          </div>
-          <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-            <a href="/timeoff/requests" style={headerLink}>Requests list</a>
-            <a href="/supervisor/dashboard" style={headerLink}>Dashboard</a>
-          </div>
-        </div>
+        <SupervisorHeader title="Time-off calendar" subtitle="Every request, whatever its status" active="calendar" />
 
         <div style={{ background: WHITE, borderRadius: "0 0 16px 16px", boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", padding: "1rem 1rem 1.25rem" }}>
           {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>{error}</div>}
@@ -330,7 +319,7 @@ function PersonRow({ r, onOpen }: { r: Req; onOpen: () => void }) {
         <span style={{ display: "block", fontWeight: 700, color: TEXT, fontSize: "0.95rem" }}>{r.needsCheck ? "⚠ " : ""}{r.officer_name}</span>
         {r.absence_type && <span style={{ display: "block", fontSize: "0.8rem", color: MUTED }}>{r.absence_type}</span>}
       </span>
-      <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "uppercase", letterSpacing: "0.04em" }}>{st.label}</span>
+      <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "capitalize", letterSpacing: "0.04em" }}>{st.label}</span>
     </button>
   );
 }
@@ -342,7 +331,7 @@ function RequestDetails({ r, onFix }: { r: Req; onFix: () => void }) {
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <div style={{ flex: 1, fontSize: "1.2rem", fontWeight: 700, color: TEXT }}>{r.officer_name}</div>
-        <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "uppercase" }}>{st.label}</span>
+        <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "capitalize" }}>{st.label}</span>
       </div>
       <Detail label="Type">{r.absence_type || "—"}</Detail>
       {r.reason && <Detail label="Reason">{r.reason}</Detail>}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildTimeOffFormDocument, TimeOffRequest } from "../requests/timeoff-form-template";
+import SupervisorHeader, { StatStrip, headerButton } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -75,29 +76,16 @@ export default function TimeOffViewPage() {
   const sc = statusColors[request!.status] || statusColors.pending;
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 780, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
-        <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services · Supervisor Portal</div>
-          </div>
-          <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-            <a href="/timeoff/requests" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem", textDecoration: "none" }}>← All Requests</a>
-            <button onClick={generatePDF} style={{ background: GREEN, color: WHITE, border: "none", borderRadius: 12, padding: "0.45rem 1.25rem", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", letterSpacing: "0.04em" }}>
-              Download PDF
-            </button>
-          </div>
-        </div>
+        <SupervisorHeader title="Time-off request" active="timeoff" actions={<><a href="/timeoff/requests" style={headerButton()}>← All requests</a><button type="button" onClick={generatePDF} style={headerButton(true)}>Download PDF</button></>} />
 
         {request && (
           <div style={{ padding: "0 0 2rem" }}>
 
             {/* Info strip */}
-            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 2rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
+            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
               {[
                 ["Employee", request.officer_name],
                 ["Emp #", request.employee_number],
@@ -114,7 +102,7 @@ export default function TimeOffViewPage() {
                 </div>
               ) : null)}
               <div style={{ marginLeft: "auto" }}>
-                <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: sc.bg, color: sc.color, border: `1px solid ${sc.border}`, textTransform: "capitalize", letterSpacing: "0.05em" }}>
                   {request.status}
                 </span>
               </div>
@@ -122,7 +110,7 @@ export default function TimeOffViewPage() {
 
             {/* Employee section */}
             <SectionBar label="Time Off Information — Employee" />
-            <div style={{ padding: "1rem 2rem", background: "#fafafa" }}>
+            <div style={{ padding: "1rem 1.25rem", background: "#fafafa" }}>
               {request.reason && (
                 <div style={{ marginBottom: "0.75rem" }}>
                   <Label>Reason For Absence</Label>
@@ -137,7 +125,7 @@ export default function TimeOffViewPage() {
 
             {/* Manager section */}
             <SectionBar label="Manager / Scheduling Supervisor Approval" />
-            <div style={{ padding: "1rem 2rem" }}>
+            <div style={{ padding: "1rem 1.25rem" }}>
               {request.manager_signature ? (
                 <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem 1.25rem" }}>
                   <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
@@ -177,8 +165,8 @@ export default function TimeOffViewPage() {
             </div>
 
             {/* Download button */}
-            <div style={{ padding: "1.5rem 2rem", borderTop: `1px solid ${BORDER}` }}>
-              <button onClick={generatePDF} style={{ background: NAVY, color: WHITE, border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" }}>
+            <div style={{ padding: "1.5rem 1.25rem", borderTop: `1px solid ${BORDER}` }}>
+              <button onClick={generatePDF} style={{ background: NAVY, color: WHITE, border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" }}>
                 Download Complete PDF
               </button>
             </div>
@@ -191,7 +179,7 @@ export default function TimeOffViewPage() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.75rem 1.25rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>
       {label}
     </div>
   );

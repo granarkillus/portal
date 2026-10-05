@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildDarFormDocument, DARRecord } from "./dar-form-template";
+import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -103,29 +104,12 @@ export default function DARReport() {
   const groups = groupByOfficer();
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", borderRadius: "4px 4px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-            <a href="/supervisor/dashboard" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard
-            </a>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700 }}>DAR Report Generator</div>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Washington University · Saint Louis</div>
-            </div>
-          </div>
-        </div>
+        <SupervisorHeader title="DAR reports" active="dars" />
 
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1.5rem 2rem", marginBottom: "1.5rem" }}>
+        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1.5rem 1.25rem", marginBottom: "1.5rem" }}>
           <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: "1rem" }}>Search Parameters</div>
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "flex-end" }}>
             <div style={{ flex: 1, minWidth: 160 }}>
@@ -157,7 +141,7 @@ export default function DARReport() {
               </div>
             ) : (
               <>
-                <div style={{ background: DARK, padding: "0.75rem 2rem", display: "flex", gap: "2rem", flexWrap: "wrap", borderRadius: "4px 4px 0 0" }}>
+                <div style={{ background: DARK, padding: "0.75rem 1.25rem", display: "flex", gap: "2rem", flexWrap: "wrap", borderRadius: "4px 4px 0 0" }}>
                   {[["Submissions", records.length], ["Officers", Object.keys(groups).length], ["Incidents (*)", records.filter((r) => r.activity_log?.some((e) => e.activity?.includes("*"))).length]].map(([label, val]) => (
                     <div key={label as string}>
                       <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
@@ -171,12 +155,12 @@ export default function DARReport() {
 
                 {Object.entries(groups).map(([officer, dars]) => (
                   <div key={officer} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none" }}>
-                    <div style={{ background: "#eaf1fb", padding: "0.6rem 2rem", borderBottom: `1px solid ${BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ background: "#eaf1fb", padding: "0.6rem 1.25rem", borderBottom: `1px solid ${BORDER}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <span style={{ fontWeight: 700, color: NAVY, fontSize: "0.9rem" }}>{officer}</span>
                       <span style={{ color: MUTED, fontSize: "0.78rem" }}>{dars.length} submission{dars.length !== 1 ? "s" : ""}</span>
                     </div>
                     {dars.map((dar, i) => (
-                      <div key={dar.id} style={{ padding: "1rem 2rem", borderBottom: i < dars.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                      <div key={dar.id} style={{ padding: "1rem 1.25rem", borderBottom: i < dars.length - 1 ? `1px solid ${BORDER}` : "none" }}>
                         <div style={{ marginBottom: "0.5rem" }}>
                           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                             <span style={{ fontWeight: 700, fontSize: "0.88rem", color: TEXT }}>{formatDisplayDate(dar.date)}</span>
@@ -218,7 +202,7 @@ export default function DARReport() {
                   </div>
                 ))}
 
-                <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 2rem", borderRadius: "0 0 4px 4px" }}>
+                <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", borderRadius: "0 0 4px 4px" }}>
                   <button onClick={generatePDF} style={{ ...btnStyle(NAVY), width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>Print DAR Forms</button>
                 </div>
               </>
@@ -249,5 +233,5 @@ const inputStyle: React.CSSProperties = {
 };
 
 function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
+  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
 }
