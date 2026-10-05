@@ -3,88 +3,89 @@
 import { useState, useEffect } from "react";
 import { getPublicSupabase } from "@/lib/supabase";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
+import {
+  C, SUPERVISORS, FormShell, Section, Label, Req, FieldError, TextField, ChoiceField, FixedLine,
+  SignBox, StickyBar, PrimaryButton, MissingNote, DoneCard, Chip, chipWrap, inputStyle, todayIso, outlineButton,
+} from "@/components/ui";
 
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
+// Every past acknowledgement used these, so they start filled in (editable).
+const DEFAULT_POSITION = "Security Officer";
+const DEFAULT_SITE = "Washington University";
 
 export default function AUSAcknowledgement() {
-  const [form, setForm] = useState({
+  const blank = () => ({
     employeeName: "",
     employeeId: "",
-    position: "",
-    clientSite: "",
+    position: DEFAULT_POSITION,
+    clientSite: DEFAULT_SITE,
     supervisor: "",
-    noticeDate: "",
+    noticeDate: todayIso(),
     infraction: "",
     agreement: "",
     comments: "",
     signature: "",
-    dateSigned: "",
+    dateSigned: todayIso(),
   });
-
+  const [form, setForm] = useState(blank);
+  const [editDetails, setEditDetails] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const set =
-    (field: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
-      setForm((f) => ({ ...f, [field]: e.target.value }));
-
-  const setAgreement = (val: string) =>
-    setForm((f) => ({ ...f, agreement: f.agreement === val ? "" : val }));
-
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const [y, m, d] = iso.split("-");
-    return `${m}/${d}/${y}`;
-  };
-
-  // Show what's missing (in red) once they've tried to submit.
   const [triedSubmit, setTriedSubmit] = useState(false);
 
+  const setField = (field: keyof ReturnType<typeof blank>) => (v: string) => setForm((f) => ({ ...f, [field]: v }));
+
   // Fill in the officer's details remembered from their last Allied form.
-  useEffect(() => {
+  const applyRemembered = () => {
     const me = getOfficer();
     if (me.name) setForm((f) => ({ ...f, employeeName: f.employeeName || me.name || "", employeeId: f.employeeId || me.employeeNumber || "" }));
-  }, []);
+  };
+  useEffect(applyRemembered, []);
 
-  const required =
-    form.employeeName &&
-    form.position &&
-    form.clientSite &&
-    form.supervisor &&
-    form.noticeDate &&
-    form.agreement &&
-    form.signature &&
-    form.dateSigned;
+  // Signing follows the name if they edit it afterwards.
+  useEffect(() => {
+    setForm((f) => (f.signature && f.signature !== f.employeeName.trim() ? { ...f, signature: f.employeeName.trim() } : f));
+  }, [form.employeeName]);
+
+  const missing: { id: string; msg: string }[] = [];
+  if (!form.employeeName.trim()) missing.push({ id: "employeeName", msg: "your name" });
+  if (!form.position.trim()) missing.push({ id: "details", msg: "position title" });
+  if (!form.clientSite.trim()) missing.push({ id: "details", msg: "client site" });
+  if (!form.supervisor.trim()) missing.push({ id: "supervisor", msg: "supervisor" });
+  if (!form.noticeDate) missing.push({ id: "noticeDate", msg: "notice date" });
+  if (!form.agreement) missing.push({ id: "agreement", msg: "agree or disagree" });
+  if (!form.signature) missing.push({ id: "sign-box", msg: "tick the box to sign" });
+  if (!form.dateSigned) missing.push({ id: "sign-box", msg: "date signed" });
+  const err = (id: string) => triedSubmit && missing.some((m) => m.id === id);
 
   const handleSubmit = async () => {
-    if (!required) { setTriedSubmit(true); return; }
+    if (submitting) return;
+    if (missing.length > 0) {
+      setTriedSubmit(true);
+      if (missing[0].id === "details") setEditDetails(true);
+      document.getElementById(missing[0].id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setSubmitting(true);
     setError("");
 
     const supabase = getPublicSupabase();
     const { error: dbError } = await supabase.from("disciplinary_records").insert([{
-      officer_name: form.employeeName,
-      employee_id: form.employeeId || null,
-      position: form.position,
-      client_site: form.clientSite,
-      supervisor: form.supervisor,
+      officer_name: form.employeeName.trim(),
+      employee_id: form.employeeId.trim() || null,
+      position: form.position.trim(),
+      client_site: form.clientSite.trim(),
+      supervisor: form.supervisor.trim(),
       notice_date: form.noticeDate,
-      infraction: form.infraction || null,
+      infraction: form.infraction.trim() || null,
       agreement: form.agreement,
-      officer_comments: form.comments || null,
+      officer_comments: form.comments.trim() || null,
       signature: form.signature,
       date_signed: form.dateSigned,
     }]);
 
     if (dbError) {
-      setError("Submission failed. Please try again.");
+      setError("Submission failed. Please check your connection and try again.");
       setSubmitting(false);
       return;
     }
@@ -92,180 +93,97 @@ export default function AUSAcknowledgement() {
     rememberOfficer({ name: form.employeeName.trim(), employeeNumber: form.employeeId.trim() || undefined });
     setSubmitted(true);
     setSubmitting(false);
+    window.scrollTo(0, 0);
   };
 
   const handleReset = () => {
-    setForm({
-      employeeName: "", employeeId: "", position: "", clientSite: "",
-      supervisor: "", noticeDate: "", infraction: "", agreement: "",
-      comments: "", signature: "", dateSigned: "",
-    });
+    setForm(blank());
     setSubmitted(false);
+    setTriedSubmit(false);
+    setEditDetails(false);
     setError("");
+    applyRemembered();
   };
 
   if (submitted) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-        <div style={{ maxWidth: 480, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
-          <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem" }}>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300 }}>™</sup>
-            </div>
-          </div>
-          <div style={{ padding: "2.5rem 2rem" }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Response Submitted</div>
-            <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
-              Your acknowledgement has been recorded and will be placed in your personnel file.
-            </div>
-            <button onClick={handleReset} style={btnStyle(NAVY)}>Done</button>
-          </div>
+      <DoneCard title="Response submitted">
+        <div style={{ color: C.muted, fontSize: "0.95rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
+          Your acknowledgement has been recorded and will be placed in your personnel file.
         </div>
-      </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <a href="/forms" style={{ ...outlineButton, background: C.navy, color: C.white }}>Done</a>
+          <button type="button" onClick={handleReset} style={{ ...outlineButton, color: C.muted, borderColor: C.border }}>Submit another response</button>
+        </div>
+      </DoneCard>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 680, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
-        <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span>
-              <sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>There for you.</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: WHITE, fontSize: "0.88rem", fontWeight: 700, lineHeight: 1.3 }}>Coaching – Counseling – Disciplinary Notice</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.76rem" }}>Employee Acknowledgement</div>
-          </div>
+    <FormShell
+      title="Respond to a write-up"
+      subtitle="Coaching – Counseling – Disciplinary Notice acknowledgement"
+      footer="Allied Universal Security Services · Please keep all completed forms on file for audit purposes. · rev 8/1617"
+      bar={
+        <StickyBar>
+          {triedSubmit && <MissingNote items={Array.from(new Set(missing.map((m) => m.msg)))} />}
+          {error && <div style={{ fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>{error}</div>}
+          <PrimaryButton onClick={handleSubmit} disabled={submitting}>{submitting ? "Sending…" : "Submit acknowledgement"}</PrimaryButton>
+        </StickyBar>
+      }
+    >
+      <Section title="About you">
+        <TextField id="employeeName" label="Your name" value={form.employeeName} onChange={setField("employeeName")} required placeholder="First and last name" autoComplete="name" error={err("employeeName") && "Enter your name"} />
+        <TextField label="Employee ID" value={form.employeeId} onChange={setField("employeeId")} optional inputMode="numeric" placeholder="If you know it" />
+        <div id="details">
+          <FixedLine text={`${form.position || "—"} · ${form.clientSite || "—"}`} editing={editDetails} onToggle={() => setEditDetails((v) => !v)} />
+          {editDetails && (
+            <>
+              <TextField label="Position title" value={form.position} onChange={setField("position")} required error={err("details") && !form.position.trim() && "Enter your position"} />
+              <TextField label="Client site" value={form.clientSite} onChange={setField("clientSite")} required error={err("details") && !form.clientSite.trim() && "Enter the client site"} />
+            </>
+          )}
+        </div>
+      </Section>
+
+      <Section title="About the notice">
+        <ChoiceField id="supervisor" label="Supervisor who gave the notice" options={SUPERVISORS} value={form.supervisor} onChange={setField("supervisor")} required otherPlaceholder="Supervisor's name" error={err("supervisor") && "Pick your supervisor"} />
+        <div id="noticeDate" style={{ marginBottom: "1.25rem" }}>
+          <Label>Date of the notice<Req /></Label>
+          <input type="date" value={form.noticeDate} max={todayIso()} onChange={(e) => setField("noticeDate")(e.target.value)} style={inputStyle(err("noticeDate"))} />
+          <FieldError msg={err("noticeDate") && "Pick the date of the notice"} />
+        </div>
+        <TextField label="Infraction / reason" value={form.infraction} onChange={setField("infraction")} optional placeholder="e.g. Post abandonment" />
+      </Section>
+
+      <Section title="Your acknowledgement">
+        <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: C.text, margin: "0 0 0.9rem" }}>
+          I acknowledge that this Coaching-Counseling-Disciplinary Notice has been reviewed with me. By signing below I acknowledge a copy has been given to me, and that a copy will be placed in my personnel file.
+        </p>
+        <div style={{ fontSize: "0.92rem", lineHeight: 1.55, color: C.text, fontWeight: 600, background: C.softBg, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.navy}`, borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.25rem" }}>
+          I understand that signing this document does not constitute agreement and I may provide a rebuttal statement which will also be placed in my personnel file.
         </div>
 
-        <div style={{ padding: "0 0 2rem" }}>
-          <SectionBar label="Notice Reference Information" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
-            <Row>
-              <Field label="Employee Name" value={form.employeeName} onChange={set("employeeName")} required />
-              <Field label="Employee ID (optional)" value={form.employeeId} onChange={set("employeeId")} />
-            </Row>
-            <Row>
-              <Field label="Position Title" value={form.position} onChange={set("position")} required />
-              <Field label="Client Site" value={form.clientSite} onChange={set("clientSite")} required />
-            </Row>
-            <Row>
-              <Field label="Supervisor Name" value={form.supervisor} onChange={set("supervisor")} required />
-              <Field label="Notice Date" value={form.noticeDate} onChange={set("noticeDate")} type="date" required />
-            </Row>
-            <Field label="Infraction / Reason (optional)" value={form.infraction} onChange={set("infraction")} placeholder="e.g. Post Abandonment" />
+        <div id="agreement" style={{ marginBottom: "1.25rem" }}>
+          <Label>Do you agree with the notice?<Req /></Label>
+          <div style={chipWrap}>
+            <Chip selected={form.agreement === "agreed"} onClick={() => setForm((f) => ({ ...f, agreement: f.agreement === "agreed" ? "" : "agreed" }))}>Agreed</Chip>
+            <Chip selected={form.agreement === "disagreed"} onClick={() => setForm((f) => ({ ...f, agreement: f.agreement === "disagreed" ? "" : "disagreed" }))}>Disagreed</Chip>
           </div>
-
-          <SectionBar label="7. Acknowledgement" />
-          <div style={{ padding: "1.5rem 2rem 0" }}>
-            <p style={{ fontSize: "0.85rem", lineHeight: 1.65, color: TEXT, marginBottom: "1rem" }}>
-              I acknowledge that this Coaching-Counseling-Disciplinary Notice has been reviewed with me. By signing below I acknowledge a copy has been given to me, and that a copy will be placed in my personnel file.
-            </p>
-            <div style={{ fontSize: "0.82rem", lineHeight: 1.6, color: TEXT, fontStyle: "italic", fontWeight: 600, background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1.5rem" }}>
-              I understand that signing this document does not constitute agreement and I may provide a rebuttal statement which will also be placed in my personnel file.
-            </div>
-
-            <Label>Agreement <Req /></Label>
-            <div style={{ display: "flex", gap: "2rem", margin: "0.5rem 0 1.5rem" }}>
-              {["agreed", "disagreed"].map((val) => (
-                <label key={val} onClick={() => setAgreement(val)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.92rem", fontWeight: form.agreement === val ? 700 : 400, color: TEXT, userSelect: "none" }}>
-                  <div style={{ width: 17, height: 17, border: `2px solid ${form.agreement === val ? NAVY : BORDER}`, borderRadius: 2, background: form.agreement === val ? NAVY : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
-                    {form.agreement === val && (
-                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                        <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                    )}
-                  </div>
-                  {val.charAt(0).toUpperCase() + val.slice(1)}
-                </label>
-              ))}
-            </div>
-
-            <Label>Employee Comments (optional — rebuttal will be placed in personnel file)</Label>
-            <textarea value={form.comments} onChange={set("comments")} placeholder="Enter any rebuttal or comments here..." rows={5} style={{ width: "100%", boxSizing: "border-box", padding: "0.6rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.88rem", color: TEXT, background: "#ffffff", fontFamily: "inherit", resize: "vertical", marginTop: 4, marginBottom: "1.25rem" }} />
-
-            <Row>
-              <Field label="Employee Signature (type full name)" value={form.signature} onChange={set("signature")} placeholder="Full legal name" required />
-              <Field label="Date Signed" value={form.dateSigned} onChange={set("dateSigned")} type="date" required />
-            </Row>
-
-            {error && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
-                {error}
-              </div>
-            )}
-
-            <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                style={{ ...btnStyle(!submitting ? NAVY : "#9ca3af"), cursor: !submitting ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-              >
-                {submitting ? "Submitting..." : "Submit Acknowledgement"}
-              </button>
-              {!required && <div style={{ fontSize: "0.75rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center" }}>Complete all required fields before submitting</div>}
-            </div>
-          </div>
-
-          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
-            Allied Universal Security Services &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes. &nbsp;·&nbsp; rev 8/1617
-          </div>
+          <FieldError msg={err("agreement") && "Pick one"} />
         </div>
-      </div>
-    </div>
+
+        <div style={{ marginBottom: "1.25rem" }}>
+          <Label>Your comments or rebuttal <span style={{ color: C.muted, fontWeight: 400, fontSize: "0.85rem" }}>(optional, placed in your personnel file)</span></Label>
+          <textarea value={form.comments} onChange={(e) => setField("comments")(e.target.value)} placeholder={form.agreement === "disagreed" ? "Explain why you disagree" : "Anything you want on record"} rows={4} style={{ ...inputStyle(false), resize: "vertical", minHeight: 100, lineHeight: 1.5 }} />
+        </div>
+
+        <SignBox name={form.employeeName} signed={!!form.signature} onChange={(s) => setForm((f) => ({ ...f, signature: s ? f.employeeName.trim() : "" }))} error={err("sign-box") && !form.signature} />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.75rem", fontSize: "0.9rem", color: C.muted }}>
+          <span>Date signed</span>
+          <input type="date" value={form.dateSigned} max={todayIso()} onChange={(e) => setField("dateSigned")(e.target.value)} style={{ ...inputStyle(err("sign-box") && !form.dateSigned), width: "auto", padding: "0.5rem 0.7rem", fontSize: "0.95rem" }} />
+        </div>
+      </Section>
+    </FormShell>
   );
-}
-
-function SectionBar({ label }: { label: string }) {
-  return (
-    <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>
-      {label}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-      {children}
-    </div>
-  );
-}
-
-function Req() {
-  return <span style={{ color: "#b3261e", marginLeft: 2 }}>*</span>;
-}
-
-function Field({ label, value, onChange, placeholder, type = "text", required: req }: {
-  label: string; value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string; type?: string; required?: boolean;
-}) {
-  return (
-    <div style={{ marginBottom: "1rem" }}>
-      <Label>{label}{req && <Req />}</Label>
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={{ width: "100%", boxSizing: "border-box", padding: "0.5rem 0.75rem", border: "1px solid #d1d5db", borderRadius: 12, fontSize: "0.88rem", color: "#1a1a2e", background: "#ffffff", outline: "none", fontFamily: "inherit", marginTop: 2 }} />
-    </div>
-  );
-}
-
-function Row({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
-      {Array.isArray(children) ? children.map((child, i) => <div key={i} style={{ flex: 1 }}>{child}</div>) : <div style={{ flex: 1 }}>{children}</div>}
-    </div>
-  );
-}
-
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
 }

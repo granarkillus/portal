@@ -327,35 +327,27 @@ export default function DARForm() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: WHITE, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
 
-        <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
             </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services</div>
+            <a href="/forms" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 }}>‹ All forms</a>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-            <a href="/forms" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Officer Portal
-            </a>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700 }}>Daily Activity Report</div>
-              <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Complete all sections for each day worked</div>
-            </div>
-          </div>
+          <div style={{ color: WHITE, fontSize: "1.5rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Daily Activity Report</div>
+          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.95rem", marginTop: 4 }}>Enter your shift, then tap to fill in your activity.</div>
         </div>
 
         <div style={{ padding: "0 0 2rem" }}>
 
-          {draftRestored && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="DAR" onStartOver={startOver} /></div>}
+          {draftRestored && <div style={{ padding: "0.9rem 1.25rem 0" }}><DraftNotice what="DAR" onStartOver={startOver} /></div>}
 
-          <SectionBar label="Section I: Employee Information" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
-            <Field label="Officer on Duty" value={form.officerName} onChange={set("officerName")} required placeholder="Full legal name" />
+          <SectionBar label="About you" />
+          <div style={{ padding: "0.9rem 1.25rem 0" }}>
+            <Field label="Your name" value={form.officerName} onChange={set("officerName")} required placeholder="Full legal name" />
             <div style={{ marginBottom: "1rem" }}>
               <Label>Date of shift<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
               <div style={chipRow}>
@@ -392,7 +384,7 @@ export default function DARForm() {
               </Row>
             )}
             <div style={{ marginBottom: "1rem" }}>
-              <Label>Scheduled Shift / Post</Label>
+              <Label>Your post</Label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.5rem" }}>
                 {POSTS.map((p) => {
                   const on = form.scheduledShift.trim().toLowerCase() === p.toLowerCase();
@@ -405,16 +397,21 @@ export default function DARForm() {
               </div>
               <input value={form.scheduledShift} onChange={set("scheduledShift")} placeholder="Tap your post, or type it" style={inputStyle} />
             </div>
-            <Label>Received Items</Label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem 1.5rem", margin: "0.5rem 0 0.5rem" }}>
-              {[["receivedRadio", "Radio"], ["receivedPager", "Pager"], ["receivedKeys", "Keys"], ["receivedDetex", "Detex"]].map(([field, label]) => (
-                <CheckboxItem key={field} label={label} checked={form[field as keyof typeof form] as boolean} onChange={toggle(field)} />
-              ))}
+            <Label>Received items <span style={{ color: MUTED, fontWeight: 400, fontSize: "0.85rem" }}>(tap all that apply)</span></Label>
+            <div style={{ ...chipRow, gap: "0.5rem", marginBottom: "0.5rem" }}>
+              {([["receivedRadio", "Radio"], ["receivedPager", "Pager"], ["receivedKeys", "Keys"], ["receivedDetex", "Detex"]] as const).map(([field, label]) => {
+                const on = form[field];
+                return (
+                  <button key={field} type="button" aria-pressed={on} onClick={toggle(field)} style={{ ...chip, minHeight: 44, padding: "0.5rem 1rem", background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                    {on ? "✓ " : ""}{label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <SectionBar label="Section II: Record of Hours Worked" />
-          <div id="shift-times" style={{ padding: "1.25rem 2rem 0" }}>
+          <SectionBar label="Your shift" />
+          <div id="shift-times" style={{ padding: "0.9rem 1.25rem 0" }}>
             <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "0.75rem" }}>Start here: your activity times fill in from your shift.</div>
             {lastShift && !lastShiftApplied && (
               <button type="button" onClick={useLastShift} style={{ display: "flex", alignItems: "center", gap: "0.6rem", width: "100%", textAlign: "left", background: "#eaf1fb", border: `1.5px solid ${NAVY}`, borderRadius: 12, padding: "0.75rem 0.9rem", marginBottom: "1rem", cursor: "pointer", fontFamily: "inherit", color: NAVY, minHeight: 0 }}>
@@ -439,14 +436,14 @@ export default function DARForm() {
           </div>
 
           {suggestYesterday && (
-            <div style={{ margin: "0 2rem", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center", fontSize: "0.9rem", color: "#9a3412" }}>
+            <div style={{ margin: "0.75rem 1.25rem 0", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center", fontSize: "0.9rem", color: "#9a3412" }}>
               <span style={{ flex: 1 }}>🌙 Overnight shift: it started yesterday. Use yesterday&apos;s date?</span>
               <button type="button" onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: yesterday })); }} style={{ background: "#9a3412", color: WHITE, border: "none", borderRadius: 999, padding: "0.4rem 0.85rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.85rem", cursor: "pointer", minHeight: 0, whiteSpace: "nowrap" }}>Use {yesterday.slice(0, 5)}</button>
             </div>
           )}
 
-          <SectionBar label="Section III: Activity Details" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
+          <SectionBar label="Activity" />
+          <div style={{ padding: "0.9rem 1.25rem 0" }}>
             {!shiftReady ? (
               <div style={{ background: SOFT_BG, border: `1.5px dashed ${BORDER}`, borderRadius: 12, padding: "1.25rem", textAlign: "center", color: MUTED, fontSize: "0.95rem", lineHeight: 1.5 }}>
                 ⏰ Enter your <strong style={{ color: TEXT }}>Time In</strong> and <strong style={{ color: TEXT }}>Time Out</strong> above.<br />Your activity entries will be set up for you.
@@ -533,8 +530,8 @@ export default function DARForm() {
             )}
           </div>
 
-          <SectionBar label="Section IV: Employee Signature" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
+          <SectionBar label="Sign" />
+          <div style={{ padding: "0.9rem 1.25rem 0" }}>
             <div style={{ fontSize: "0.78rem", color: TEXT, lineHeight: 1.65, marginBottom: "1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
               By your signature, you acknowledge that the information on this DAR is a true and accurate record of your time and account activity today.
             </div>
@@ -552,7 +549,7 @@ export default function DARForm() {
             )}
           </div>
 
-          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
+          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 1.25rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
             Allied Universal Security Services &nbsp;·&nbsp; Washington University &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes.
           </div>
         </div>
@@ -586,7 +583,7 @@ export default function DARForm() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: `2px solid ${NAVY}`, color: NAVY, fontSize: "1.05rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.75rem 1.25rem 0", color: TEXT, fontSize: "1.15rem", fontWeight: 700 }}>
       {label}
     </div>
   );
@@ -624,20 +621,6 @@ function Row({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CheckboxItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
-  return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: TEXT, fontWeight: checked ? 600 : 400, userSelect: "none", marginBottom: "0.5rem" }}>
-      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? NAVY : BORDER}`, borderRadius: 2, background: checked ? NAVY : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
-        {checked && (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
-      <span onClick={onChange}>{label}</span>
-    </label>
-  );
-}
 
 const chipRow: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.4rem" };
 const chip: React.CSSProperties = {

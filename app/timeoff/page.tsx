@@ -1,71 +1,102 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getOfficer, rememberOfficer } from "@/lib/officer-memory";
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { newId, sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import { describeDates, parseRequestedDates } from "@/lib/parse-dates";
 import { buildTimeOffFormDocument, TimeOffRequest } from "./requests/timeoff-form-template";
+import {
+  C, SUPERVISORS, FormShell, Section, Label, Req, FieldError, TextField, ChoiceField, FixedLine,
+  SignBox, StickyBar, PrimaryButton, MissingNote, DoneCard, Chip, chipWrap, inputStyle, todayIso, outlineButton,
+} from "@/components/ui";
 
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
 const SUPERVISOR_PHONE = "8542387112";
+const DEFAULT_ACCOUNT = "Washington University";
+
+// Stored values must match the printed form's checkbox labels exactly.
+const ABSENCE_TYPES: [string, string][] = [
+  ["Vacation", "Vacation"],
+  ["Sick (If Applicable)", "Sick"],
+  ["Military (Must provide documentation)", "Military"],
+  ["Other", "Other"],
+];
 
 export default function AUSTimeOffForm() {
-  const [form, setForm] = useState({
+  const blank = () => ({
     employeeName: "",
     employeeNumber: "",
-    account: "",
+    account: DEFAULT_ACCOUNT,
     manager: "",
     absenceType: "",
     otherType: "",
     reasonForAbsence: "",
     daysAndDates: "",
     employeeSignature: "",
-    employeeDate: "",
+    employeeDate: todayIso(),
     pickedDates: [] as string[],
     useVacation: "" as "" | "yes" | "no",
     vacationInitials: "",
   });
+  const [form, setForm] = useState(blank);
+  const [editAccount, setEditAccount] = useState(false);
+  const [typeDates, setTypeDates] = useState(false);
 
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((f) => ({ ...f, [field]: e.target.value }));
-
-  const setAbsence = (val: string) => () =>
-    setForm((f) => ({ ...f, absenceType: f.absenceType === val ? "" : val }));
-
-  // Show what's missing (in red) once they've tried to submit.
   const [triedSubmit, setTriedSubmit] = useState(false);
 
+  const setField = (field: "employeeName" | "employeeNumber" | "account" | "manager" | "otherType" | "reasonForAbsence" | "daysAndDates" | "employeeDate" | "vacationInitials") =>
+    (v: string) => setForm((f) => ({ ...f, [field]: v }));
+
   // Fill in the officer's details remembered from their last Allied form.
-  useEffect(() => {
+  const applyRemembered = () => {
     const me = getOfficer();
     if (me.name) setForm((f) => ({ ...f, employeeName: f.employeeName || me.name || "", employeeNumber: f.employeeNumber || me.employeeNumber || "" }));
-  }, []);
+  };
+  useEffect(applyRemembered, []);
+
+  // Signing follows the name if they edit it afterwards.
+  useEffect(() => {
+    setForm((f) => (f.employeeSignature && f.employeeSignature !== f.employeeName.trim() ? { ...f, employeeSignature: f.employeeName.trim() } : f));
+  }, [form.employeeName]);
 
   // Keep an unsent request on this phone if the tab is closed or the screen locks.
   const [queued, setQueued] = useState(false);
-  const draftHasContent = !!(form.absenceType || form.useVacation || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.employeeSignature.trim() || form.account.trim() || form.manager.trim());
-  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({ ...f, ...saved, pickedDates: Array.isArray(saved.pickedDates) ? saved.pickedDates : [], useVacation: saved.useVacation || "", vacationInitials: saved.vacationInitials || "" })), draftHasContent && !submitted);
+  const draftHasContent = !!(form.absenceType || form.useVacation || form.reasonForAbsence.trim() || form.daysAndDates.trim() || form.manager.trim());
+  const draftRestored = useDraft("timeoff", form, (saved) => setForm((f) => ({
+    ...f, ...saved,
+    pickedDates: Array.isArray(saved.pickedDates) ? saved.pickedDates : [],
+    useVacation: saved.useVacation || "",
+    vacationInitials: saved.vacationInitials || "",
+    account: saved.account || DEFAULT_ACCOUNT,
+    employeeDate: saved.employeeDate || todayIso(),
+  })), draftHasContent && !submitted);
 
   // Initials for the vacation-time answer default to the officer's initials.
   const autoInitials = form.employeeName.trim().split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join("").slice(0, 4);
   const vacationInitials = (form.vacationInitials.trim() || autoInitials).toUpperCase();
 
-  const required =
-    form.employeeName && form.absenceType && form.useVacation && form.daysAndDates && form.employeeSignature;
+  const showTypedDates = typeDates || (!!form.daysAndDates && form.pickedDates.length === 0);
+
+  const missing: { id: string; msg: string }[] = [];
+  if (!form.employeeName.trim()) missing.push({ id: "employeeName", msg: "your name" });
+  if (!form.absenceType) missing.push({ id: "absenceType", msg: "type of absence" });
+  else if (form.absenceType === "Other" && !form.otherType.trim()) missing.push({ id: "absenceType", msg: "describe the other absence type" });
+  if (!form.useVacation) missing.push({ id: "useVacation", msg: "use vacation time? yes or no" });
+  if (!form.daysAndDates.trim()) missing.push({ id: "dates", msg: "the dates you need off" });
+  if (!form.employeeSignature) missing.push({ id: "sign-box", msg: "tick the box to sign" });
+  const err = (id: string) => triedSubmit && missing.some((m) => m.id === id);
 
   const handleSubmit = async () => {
-    if (!required) { setTriedSubmit(true); return; }
+    if (submitting) return;
+    if (missing.length > 0) {
+      setTriedSubmit(true);
+      document.getElementById(missing[0].id)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setSubmitting(true);
     setError("");
 
@@ -97,7 +128,7 @@ export default function AUSTimeOffForm() {
     }, `Time-off request: ${form.daysAndDates}`);
 
     if (result.status === "failed") {
-      setError("Submission failed. Please try again.");
+      setError("Submission failed. Please check your connection and try again.");
       setSubmitting(false);
       return;
     }
@@ -108,6 +139,7 @@ export default function AUSTimeOffForm() {
     rememberOfficer({ name: form.employeeName.trim(), employeeNumber: form.employeeNumber.trim() || undefined });
     setSubmitted(true);
     setSubmitting(false);
+    window.scrollTo(0, 0);
   };
 
   // Prints the officer's copy on the official Allied Universal Time-off
@@ -155,254 +187,155 @@ export default function AUSTimeOffForm() {
   };
 
   const handleReset = () => {
-    setForm({ employeeName: "", employeeNumber: "", account: "", manager: "", absenceType: "", otherType: "", reasonForAbsence: "", daysAndDates: "", employeeSignature: "", employeeDate: "", pickedDates: [], useVacation: "", vacationInitials: "" });
+    setForm(blank());
     setSubmitted(false);
     setQueued(false);
+    setTriedSubmit(false);
+    setTypeDates(false);
+    setEditAccount(false);
     setError("");
+    applyRemembered();
   };
 
-  return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+  const startOver = () => { clearDraft("timeoff"); handleReset(); };
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.5rem 2rem", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1.05rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.55rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.72rem", marginTop: 2, letterSpacing: "0.04em" }}>There for you.</div>
+  if (submitted) {
+    return (
+      <DoneCard title={queued ? "Request saved" : "Request submitted"} tone={queued ? "wait" : "ok"}>
+        <div style={{ color: C.muted, fontSize: "0.95rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+          {queued
+            ? <>No signal, so your request is saved on this phone and will send automatically when you&apos;re back online. Your PDF is ready to save now.</>
+            : <>Your request for <strong style={{ color: C.text }}>{form.daysAndDates}</strong> was sent. Save the PDF from the print screen, then text it to your supervisor.</>}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+          <button type="button" onClick={openSMS} style={{ ...outlineButton, background: C.green, borderColor: C.green, color: C.white }}>Text to supervisor</button>
+          <button type="button" onClick={generatePDF} style={outlineButton}>Print / save PDF again</button>
+          <a href="/forms" style={{ ...outlineButton, color: C.muted, borderColor: C.border }}>Back to all forms</a>
+          <button type="button" onClick={handleReset} style={{ ...outlineButton, color: C.muted, borderColor: C.border }}>Start a new request</button>
+        </div>
+      </DoneCard>
+    );
+  }
+
+  return (
+    <FormShell
+      title="Request time off"
+      subtitle="Vacation, sick or personal time. Requests must be in two (2) weeks ahead."
+      footer="Allied Universal Security Services · Please keep all completed forms on file for audit purposes. · UPDATED 4/19"
+      bar={
+        <StickyBar>
+          {triedSubmit && <MissingNote items={missing.map((m) => m.msg)} />}
+          {error && <div style={{ fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>{error}</div>}
+          <PrimaryButton onClick={handleSubmit} disabled={submitting}>{submitting ? "Sending…" : "Submit & get PDF"}</PrimaryButton>
+        </StickyBar>
+      }
+    >
+      {draftRestored && <div style={{ marginTop: "1.25rem" }}><DraftNotice what="time-off request" onStartOver={startOver} /></div>}
+
+      <Section title="About you">
+        <TextField id="employeeName" label="Your name" value={form.employeeName} onChange={setField("employeeName")} required placeholder="First and last name" autoComplete="name" error={err("employeeName") && "Enter your name"} />
+        <TextField label="Employee number" value={form.employeeNumber} onChange={setField("employeeNumber")} optional inputMode="numeric" placeholder="If you know it" />
+        <FixedLine text={`Account: ${form.account || "—"}`} editing={editAccount} onToggle={() => setEditAccount((v) => !v)} />
+        {editAccount && <TextField label="Account" value={form.account} onChange={setField("account")} placeholder="e.g. Washington University" />}
+        <ChoiceField label="Your manager" options={SUPERVISORS} value={form.manager} onChange={setField("manager")} optional otherPlaceholder="Manager's name" />
+      </Section>
+
+      <Section title="Your time off">
+        <div id="absenceType" style={{ marginBottom: "1.25rem" }}>
+          <Label>Type of absence<Req /></Label>
+          <div style={chipWrap}>
+            {ABSENCE_TYPES.map(([value, label]) => (
+              <Chip key={value} selected={form.absenceType === value} onClick={() => setForm((f) => ({ ...f, absenceType: f.absenceType === value ? "" : value }))}>{label}</Chip>
+            ))}
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 700, lineHeight: 1.2 }}>Allied Universal Security Services</div>
-            <div style={{ color: "rgba(255,255,255,0.75)", fontSize: "0.85rem" }}>Time-off Request Form</div>
-          </div>
+          {form.absenceType === "Military (Must provide documentation)" && <div style={{ fontSize: "0.85rem", color: C.muted, marginTop: 6 }}>Military leave needs documentation.</div>}
+          {form.absenceType === "Sick (If Applicable)" && <div style={{ fontSize: "0.85rem", color: C.muted, marginTop: 6 }}>Sick time if applicable.</div>}
+          {form.absenceType === "Other" && (
+            <input value={form.otherType} onChange={(e) => setField("otherType")(e.target.value)} placeholder="What kind of absence?" style={{ ...inputStyle(err("absenceType")), marginTop: "0.6rem" }} autoFocus />
+          )}
+          <FieldError msg={err("absenceType") && (form.absenceType === "Other" ? "Describe the absence type" : "Pick a type")} />
         </div>
 
-        <div style={{ padding: "0 0 2rem" }}>
-          {draftRestored && !submitted && <div style={{ padding: "1.25rem 2rem 0" }}><DraftNotice what="time-off request" onStartOver={() => { clearDraft("timeoff"); handleReset(); const me = getOfficer(); if (me.name) setForm((f) => ({ ...f, employeeName: me.name || "", employeeNumber: me.employeeNumber || "" })); }} /></div>}
-
-          <SectionBar label="Time Off Information" />
-          <div style={{ padding: "1.5rem 2rem 0" }}>
-            <Field label="Employee Name" value={form.employeeName} onChange={set("employeeName")} required />
-            <Row>
-              <Field label="Employee Number" value={form.employeeNumber} onChange={set("employeeNumber")} />
-              <Field label="Account" value={form.account} onChange={set("account")} />
-            </Row>
-            <Field label="Manager" value={form.manager} onChange={set("manager")} />
-
-            <div style={{ marginTop: "1.25rem", marginBottom: "0.5rem" }}>
-              <Label>Type of Absence Requested <span style={{ color: "#b3261e" }}>*</span></Label>
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1.5rem", marginBottom: "1.25rem" }}>
-              {["Vacation", "Sick (If Applicable)", "Military (Must provide documentation)"].map((type) => (
-                <CheckboxItem key={type} label={type} checked={form.absenceType === type} onChange={setAbsence(type)} />
-              ))}
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <CheckboxItem label="Other:" checked={form.absenceType === "Other"} onChange={setAbsence("Other")} />
-                {form.absenceType === "Other" && (
-                  <input value={form.otherType} onChange={set("otherType")} placeholder="Specify" style={{ ...inputStyle, width: 130 }} />
-                )}
-              </div>
-            </div>
-
-            <div style={{ background: SOFT_BG, border: `1px solid ${triedSubmit && !form.useVacation ? "#b91c1c" : BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1.25rem" }}>
-              <Label>Do you want to use vacation time if available? <span style={{ color: "#b3261e" }}>*</span></Label>
-              <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", alignItems: "center" }}>
-                {(["yes", "no"] as const).map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    aria-pressed={form.useVacation === v}
-                    onClick={() => setForm((f) => ({ ...f, useVacation: v }))}
-                    style={{ minWidth: 88, minHeight: 46, borderRadius: 999, fontFamily: "inherit", fontSize: "0.98rem", fontWeight: 700, cursor: "pointer", border: `1.5px solid ${form.useVacation === v ? NAVY : BORDER}`, background: form.useVacation === v ? NAVY : WHITE, color: form.useVacation === v ? WHITE : TEXT }}
-                  >
-                    {form.useVacation === v ? "✓ " : ""}{v === "yes" ? "Yes" : "No"}
-                  </button>
-                ))}
-                {form.useVacation && (
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", fontSize: "0.9rem", color: MUTED }}>
-                    Initials
-                    <input value={form.vacationInitials} onChange={set("vacationInitials")} placeholder={autoInitials || "AB"} maxLength={4} style={{ ...inputStyle, width: 80, textAlign: "center", textTransform: "uppercase" }} />
-                  </label>
-                )}
-              </div>
-              {triedSubmit && !form.useVacation && <div style={{ color: "#b91c1c", fontSize: "0.85rem", fontWeight: 600, marginTop: 6 }}>Pick Yes or No</div>}
-            </div>
-
-            <Field label="Reason For Absence" value={form.reasonForAbsence} onChange={set("reasonForAbsence")} />
-            <DatePicker
-              picked={form.pickedDates}
-              onChange={(dates) => setForm((f) => ({ ...f, pickedDates: dates, daysAndDates: describeDates(dates) }))}
-            />
-            <Field label="Day(s) and Date(s) of Absence" value={form.daysAndDates} onChange={set("daysAndDates")} placeholder="Pick dates above, or type them, e.g. Monday, June 9, 2026" required />
-
-            <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "0.75rem 1rem", margin: "1.5rem 0", fontSize: "0.82rem", color: TEXT, fontStyle: "italic", fontWeight: 600 }}>
-              All requests for time off must be submitted two (2) weeks in advance.
-            </div>
-
-            <Row>
-              <Field label="Employee Signature (type full name)" value={form.employeeSignature} onChange={set("employeeSignature")} placeholder="Full legal name" required />
-              <Field label="Date" value={form.employeeDate} onChange={set("employeeDate")} type="date" />
-            </Row>
-          </div>
-
-          <SectionBar label="Manager / Scheduling Supervisor Approval" />
-          <div style={{ padding: "1.25rem 2rem 0" }}>
-            <div style={{ background: "#f9f9f9", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem 1.25rem", color: MUTED, fontSize: "0.82rem", fontStyle: "italic" }}>
-              This section is completed by your supervisor after receiving your request. It will appear blank and ready to fill on the printed PDF.
-            </div>
-          </div>
-
-          <div style={{ padding: "1.75rem 2rem 0", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {error && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c" }}>
-                {error}
-              </div>
-            )}
-
-            {!submitted ? (
-              <>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  style={{ ...btnStyle(!submitting ? NAVY : "#9ca3af"), cursor: !submitting ? "pointer" : "not-allowed", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                    <polyline points="14 2 14 8 20 8" />
-                    <line x1="12" y1="18" x2="12" y2="12" />
-                    <line x1="9" y1="15" x2="15" y2="15" />
-                  </svg>
-                  {submitting ? "Submitting..." : "Submit & Generate PDF"}
-                </button>
-                {!required && (
-                  <div style={{ fontSize: "0.76rem", color: triedSubmit ? "#b91c1c" : MUTED, fontWeight: triedSubmit ? 600 : 400, textAlign: "center" }}>
-                    Complete required fields: Employee Name, Absence Type, Use Vacation Time, Date(s), and Signature
-                  </div>
-                )}
-              </>
-            ) : (
-              <>
-                {queued ? (
-                  <div style={{ background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem", color: "#7c2d12", fontWeight: 600, textAlign: "center", lineHeight: 1.5 }}>
-                    No signal, so your request is saved on this phone and will send automatically when you&apos;re back online. Your PDF is ready to save now.
-                  </div>
-                ) : (
-                  <div style={{ background: "#e8f5e9", border: "1px solid #a5d6a7", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem", color: "#2f6b3a", fontWeight: 600, textAlign: "center" }}>
-                    Request submitted — PDF is ready. Save it from the print dialog, then text it to your supervisor.
-                  </div>
-                )}
-                <button onClick={openSMS} style={{ ...btnStyle("#2f6b3a"), display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  Text to Supervisor
-                </button>
-                <button onClick={generatePDF} style={{ ...btnStyle("transparent"), color: NAVY, border: `1px solid ${NAVY}`, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                  Re-generate PDF
-                </button>
-                <button onClick={handleReset} style={{ ...btnStyle("transparent"), color: MUTED, border: `1px solid ${BORDER}`, fontSize: "0.78rem" }}>
-                  Start New Form
-                </button>
-              </>
+        <div id="useVacation" style={{ marginBottom: "1.25rem" }}>
+          <Label>Use vacation time if available?<Req /></Label>
+          <div style={{ ...chipWrap, alignItems: "center" }}>
+            <Chip selected={form.useVacation === "yes"} onClick={() => setForm((f) => ({ ...f, useVacation: "yes" }))}>Yes</Chip>
+            <Chip selected={form.useVacation === "no"} onClick={() => setForm((f) => ({ ...f, useVacation: "no" }))}>No</Chip>
+            {form.useVacation && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto", fontSize: "0.9rem", color: C.muted }}>
+                Initials
+                <input value={form.vacationInitials} onChange={(e) => setField("vacationInitials")(e.target.value)} placeholder={autoInitials || "AB"} maxLength={4} style={{ ...inputStyle(false), width: 76, textAlign: "center", textTransform: "uppercase", padding: "0.6rem 0.5rem" }} />
+              </label>
             )}
           </div>
-
-          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.73rem", color: MUTED, textAlign: "center" }}>
-            Please keep all completed forms on file for audit purposes. &nbsp;·&nbsp; UPDATED 4/19
-          </div>
+          <FieldError msg={err("useVacation") && "Pick Yes or No"} />
         </div>
-      </div>
-    </div>
+
+        <TextField label="Reason for absence" value={form.reasonForAbsence} onChange={setField("reasonForAbsence")} optional placeholder="e.g. Family trip" />
+
+        <div id="dates" style={{ marginBottom: "0.5rem" }}>
+          <DatePicker
+            picked={form.pickedDates}
+            error={err("dates") && !showTypedDates}
+            onChange={(dates) => { setTypeDates(false); setForm((f) => ({ ...f, pickedDates: dates, daysAndDates: describeDates(dates) })); }}
+          />
+          {showTypedDates ? (
+            <div style={{ marginTop: "0.75rem" }}>
+              <Label>Day(s) and date(s) of absence<Req /></Label>
+              <input value={form.daysAndDates} onChange={(e) => setForm((f) => ({ ...f, daysAndDates: e.target.value, pickedDates: [] }))} placeholder="e.g. Monday, June 9, 2026" style={inputStyle(err("dates"))} />
+            </div>
+          ) : form.daysAndDates ? (
+            <div style={{ marginTop: "0.6rem", fontSize: "0.9rem", color: C.muted, lineHeight: 1.5 }}>
+              Prints as: <span style={{ color: C.text, fontWeight: 600 }}>{form.daysAndDates}</span>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setTypeDates(true)} style={{ marginTop: "0.6rem", background: "none", border: "none", padding: 0, minHeight: 0, color: C.navy, fontWeight: 700, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "0.9rem" }}>
+              Type the dates instead
+            </button>
+          )}
+          <FieldError msg={err("dates") && "Add the dates you need off"} />
+        </div>
+      </Section>
+
+      <Section title="Sign">
+        <SignBox
+          name={form.employeeName}
+          signed={!!form.employeeSignature}
+          onChange={(s) => setForm((f) => ({ ...f, employeeSignature: s ? f.employeeName.trim() : "" }))}
+          error={err("sign-box")}
+          statement={<span style={{ color: C.muted, fontSize: "0.88rem" }}>Your supervisor completes the approval section after receiving your request.</span>}
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.75rem", fontSize: "0.9rem", color: C.muted }}>
+          <span>Date</span>
+          <input type="date" value={form.employeeDate} onChange={(e) => setField("employeeDate")(e.target.value)} style={{ ...inputStyle(false), width: "auto", padding: "0.5rem 0.7rem", fontSize: "0.95rem" }} />
+        </div>
+      </Section>
+    </FormShell>
   );
-}
-
-function SectionBar({ label }: { label: string }) {
-  return (
-    <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>
-      {label}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label, value, onChange, placeholder, type = "text", required: req }: {
-  label: string; value: string;
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  placeholder?: string; type?: string; required?: boolean;
-}) {
-  return (
-    <div style={{ marginBottom: "1rem" }}>
-      <Label>{label}{req && <span style={{ color: "#b3261e", marginLeft: 2 }}>*</span>}</Label>
-      <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={inputStyle} />
-    </div>
-  );
-}
-
-function Row({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
-      {Array.isArray(children)
-        ? children.map((child, i) => <div key={i} style={{ flex: 1 }}>{child}</div>)
-        : <div style={{ flex: 1 }}>{children}</div>}
-    </div>
-  );
-}
-
-function CheckboxItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
-  return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: TEXT, fontWeight: checked ? 600 : 400, userSelect: "none" }}>
-      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? NAVY : BORDER}`, borderRadius: 2, background: checked ? NAVY : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
-        {checked && (
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        )}
-      </div>
-      <span onClick={onChange}>{label}</span>
-    </label>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
-  border: "1px solid #d1d5db", borderRadius: 12, fontSize: "1rem",
-  color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit",
-};
-
-function btnStyle(bg: string): React.CSSProperties {
-  return {
-    background: bg, color: WHITE, border: "none", borderRadius: 12,
-    padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700,
-    letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit",
-    textTransform: "uppercase", width: "100%",
-  };
 }
 
 // Tap-to-pick dates: fills in "Day(s) and Date(s)" so the supervisor calendar
 // knows exactly which days are requested. Typing the dates still works.
-function DatePicker({ picked, onChange }: { picked: string[]; onChange: (dates: string[]) => void }) {
+function DatePicker({ picked, onChange, error }: { picked: string[]; onChange: (dates: string[]) => void; error?: boolean }) {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  const today = todayIso();
+  // Dates add themselves as soon as they're picked; this remembers which ones
+  // came from the current First/Last boxes so changing them replaces those.
+  const current = useRef<string[]>([]);
 
-  const add = () => {
-    if (!from) return;
-    const end = to && to >= from ? to : from;
-    const out = new Set(picked);
-    for (let t = Date.parse(`${from}T12:00:00Z`); t <= Date.parse(`${end}T12:00:00Z`) && out.size < 400; t += 86400000) {
-      out.add(new Date(t).toISOString().slice(0, 10));
-    }
-    onChange(Array.from(out).sort());
-    setFrom(""); setTo("");
+  const daysBetween = (a: string, b: string) => {
+    const out: string[] = [];
+    for (let t = Date.parse(`${a}T12:00:00Z`); t <= Date.parse(`${b}T12:00:00Z`) && out.length < 400; t += 86400000) out.push(new Date(t).toISOString().slice(0, 10));
+    return out;
   };
+  const apply = (a: string, b: string) => {
+    const keep = picked.filter((d) => !current.current.includes(d));
+    const added = a ? daysBetween(a, b && b >= a ? b : a) : [];
+    current.current = added.filter((d) => !keep.includes(d));
+    onChange(Array.from(new Set([...keep, ...added])).sort());
+  };
+  const another = () => { current.current = []; setFrom(""); setTo(""); };
 
   const groups: string[][] = [];
   for (const d of picked) {
@@ -413,32 +346,29 @@ function DatePicker({ picked, onChange }: { picked: string[]; onChange: (dates: 
   const short = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
 
   return (
-    <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "0.75rem" }}>
-      <Label>📅 Pick your dates <span style={{ color: "#b3261e" }}>*</span></Label>
+    <div style={{ background: C.softBg, border: `1.5px solid ${error ? C.red : C.border}`, borderRadius: 14, padding: "0.9rem 1rem" }}>
+      <Label>Dates you need off<Req /></Label>
       <div className="picker-row" style={{ display: "flex", gap: "0.6rem", alignItems: "flex-end" }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.8rem", color: MUTED, marginBottom: 4 }}>First day off</div>
-          <input type="date" value={from} min={today} onChange={(e) => { setFrom(e.target.value); if (to && to < e.target.value) setTo(""); }} style={inputStyle} />
+          <div style={{ fontSize: "0.82rem", color: C.muted, marginBottom: 4 }}>First day off</div>
+          <input type="date" value={from} min={today} onChange={(e) => { const v = e.target.value; const t = to && to >= v ? to : ""; setFrom(v); setTo(t); apply(v, t); }} style={inputStyle(false)} />
         </div>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: "0.8rem", color: MUTED, marginBottom: 4 }}>Last day off <span style={{ opacity: 0.8 }}>(if more than one)</span></div>
-          <input type="date" value={to} min={from || today} onChange={(e) => setTo(e.target.value)} style={inputStyle} />
+          <div style={{ fontSize: "0.82rem", color: C.muted, marginBottom: 4 }}>Last day off <span style={{ opacity: 0.8 }}>(if more than one)</span></div>
+          <input type="date" value={to} min={from || today} disabled={!from} onChange={(e) => { setTo(e.target.value); apply(from, e.target.value); }} style={{ ...inputStyle(false), opacity: from ? 1 : 0.55 }} />
         </div>
-        <button type="button" onClick={add} disabled={!from} style={{ background: from ? NAVY : "#94a3b8", color: WHITE, border: "none", borderRadius: 12, padding: "0.75rem 1.1rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.95rem", cursor: from ? "pointer" : "not-allowed", minHeight: 48 }}>
-          Add
-        </button>
       </div>
       {groups.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.45rem", marginTop: "0.75rem", alignItems: "center" }}>
           {groups.map((g) => (
-            <span key={g[0]} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: WHITE, border: `1.5px solid ${NAVY}`, color: NAVY, borderRadius: 999, padding: "0.35rem 0.5rem 0.35rem 0.8rem", fontSize: "0.88rem", fontWeight: 600 }}>
+            <span key={g[0]} style={{ display: "inline-flex", alignItems: "center", gap: 6, background: C.white, border: `1.5px solid ${C.navy}`, color: C.navy, borderRadius: 999, padding: "0.35rem 0.5rem 0.35rem 0.8rem", fontSize: "0.9rem", fontWeight: 600 }}>
               {g.length === 1 ? short(g[0]) : `${short(g[0])} – ${short(g[g.length - 1])}`}
-              <button type="button" aria-label="Remove" onClick={() => onChange(picked.filter((d) => !g.includes(d)))} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.95rem", padding: "0 0.2rem", minHeight: 0, lineHeight: 1 }}>✕</button>
+              <button type="button" aria-label="Remove" onClick={() => { current.current = current.current.filter((d) => !g.includes(d)); onChange(picked.filter((d) => !g.includes(d))); }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "0.95rem", padding: "0 0.2rem", minHeight: 0, lineHeight: 1 }}>✕</button>
             </span>
           ))}
+          {from && <button type="button" onClick={another} style={{ background: "none", border: `1.5px dashed ${C.navy}`, color: C.navy, borderRadius: 999, padding: "0.35rem 0.8rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 0 }}>+ Another date</button>}
         </div>
       )}
-      <div style={{ fontSize: "0.8rem", color: MUTED, marginTop: "0.6rem" }}>Add each day or stretch of days you need off. You can add more than one.</div>
     </div>
   );
 }

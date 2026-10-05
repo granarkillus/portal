@@ -84,7 +84,7 @@ export default function OfficerDashboard() {
     const supabase = getSupabase();
 
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { window.location.href = "/"; return; }
+      if (!data.user) { window.location.href = "/signin"; return; }
       setEmail(data.user.email || "");
 
       const { data: profileData } = await supabase
@@ -123,7 +123,7 @@ export default function OfficerDashboard() {
   const handleSignOut = async () => {
     const supabase = getSupabase();
     await supabase.auth.signOut();
-    window.location.href = "/";
+    window.location.href = "/signin";
   };
 
   // Lets an officer attach a doctor's note / documentation to a call-off
