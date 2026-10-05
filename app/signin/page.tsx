@@ -74,20 +74,21 @@ export default function OfficerLoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 420, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 420, width: "100%", background: WHITE, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.5rem 2rem" }}>
-          <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-            Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
+        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
+            </div>
+            <a href="/forms" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 }}>‹ All forms</a>
           </div>
-          <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services · Washington University</div>
-          <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700, marginTop: "0.5rem" }}>
-            {mode === "login" ? "Officer Portal" : mode === "register" ? "Create Account" : "Reset Password"}
-          </div>
+          <div style={{ color: "#fff", fontSize: "1.45rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>{mode === "login" ? "Sign in" : mode === "register" ? "Create an account" : "Reset your password"}</div>
+          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.92rem", marginTop: 4 }}>Officer portal · Washington University</div>
         </div>
 
-        <div style={{ padding: "1.75rem 2rem" }}>
+        <div style={{ padding: "1.75rem 1.25rem" }}>
           {resetSent ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
@@ -197,13 +198,13 @@ function ErrorBox({ message }: { message: string }) {
 }
 
 function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%", textAlign: "center" };
+  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "center" };
 }
 
 const outlineBtn: React.CSSProperties = {
   background: WHITE, color: "#1f4e79", border: "1.5px solid #1f4e79", borderRadius: 12,
-  padding: "0.65rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em",
-  cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%",
+  padding: "0.65rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, letterSpacing: "0.04em",
+  cursor: "pointer", fontFamily: "inherit", width: "100%",
   textAlign: "center",
 };
 

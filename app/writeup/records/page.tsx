@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
+import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -82,41 +83,14 @@ export default function RecordsPage() {
   const acknowledged = records.filter((r) => !!r.signature).length;
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
+    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
 
-        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", borderRadius: "4px 4px 0 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services · Supervisor Portal</div>
-          </div>
-          <div style={{ textAlign: "right", display: "flex", alignItems: "center", gap: "1.25rem" }}>
-            <a href="/supervisor/dashboard" style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-              Dashboard
-            </a>
-            <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 700 }}>Disciplinary Records</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Washington University</div>
-          </div>
-        </div>
+        <SupervisorHeader title="Write-ups" active="writeups" />
 
-        <div style={{ background: DARK, padding: "0.75rem 2rem", display: "flex", gap: "2rem", flexWrap: "wrap", alignItems: "center" }}>
-          {[["Total", records.length], ["Pending", pending], ["Acknowledged", acknowledged]].map(([label, val]) => (
-            <div key={label as string}>
-              <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em" }}>{label}</div>
-              <div style={{ color: WHITE, fontSize: "1.1rem", fontWeight: 700 }}>{val}</div>
-            </div>
-          ))}
-          <div style={{ marginLeft: "auto" }}>
-            <a href="/writeup/write" style={{ ...btnStyle(NAVY), display: "inline-block", textDecoration: "none", textAlign: "center" as const, padding: "0.45rem 1.25rem", width: "auto", fontSize: "0.78rem", border: "1px solid rgba(255,255,255,0.3)" }}>
-              + New Write-Up
-            </a>
-          </div>
-        </div>
+        <StatStrip items={[["Total", records.length], ["Awaiting signature", pending, "#8a5a00"], ["Acknowledged", acknowledged, "#146c34"]]} action={<a href="/writeup/write" style={{ display: "inline-block", background: "#1a4480", color: "#fff", textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem" }}>+ New write-up</a>} />
 
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 2rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer or infraction..."
             style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.85rem", color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit" }} />
           <div style={{ display: "flex", gap: "0.5rem" }}>
@@ -135,11 +109,11 @@ export default function RecordsPage() {
         ) : (
           filtered.map((r, i) => (
             <div key={r.id} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", borderBottom: i < filtered.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-              <div style={{ padding: "1rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+              <div style={{ padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: 4 }}>
                     <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
-                    <span style={{ fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: r.signature ? "#e8f5e9" : "#fff3cd", color: r.signature ? GREEN : "#92400e", border: `1px solid ${r.signature ? "#a5d6a7" : "#fcd34d"}`, textTransform: "uppercase" as const, letterSpacing: "0.05em" }}>
+                    <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: r.signature ? "#e8f5e9" : "#fff3cd", color: r.signature ? GREEN : "#92400e", border: `1px solid ${r.signature ? "#a5d6a7" : "#fcd34d"}`, textTransform: "capitalize" as const, letterSpacing: "0.05em" }}>
                       {r.signature === "SIGNED ON PAPER" ? "Signed on Paper" : r.signature === "REFUSED TO SIGN" ? "Refused to Sign" : r.signature ? "Acknowledged" : "Pending"}
                     </span>
                   </div>
@@ -194,5 +168,5 @@ export default function RecordsPage() {
 }
 
 function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
+  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
 }
