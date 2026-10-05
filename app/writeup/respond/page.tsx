@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getPublicSupabase } from "@/lib/supabase";
 import { useDraft, clearDraft } from "@/lib/drafts";
+import { C, Section, Label, Req, FieldError, SignBox, StickyBar, PrimaryButton, MissingNote, DoneCard, Chip, chipWrap, inputStyle as uiInput, todayIso } from "@/components/ui";
 
 const NAVY = "#1a4480";
 const DARK = "#243b5e";
@@ -38,7 +39,8 @@ export default function RespondPage() {
   const [agreement, setAgreement] = useState("");
   const [comments, setComments] = useState("");
   const [signature, setSignature] = useState("");
-  const [dateSigned, setDateSigned] = useState("");
+  const [dateSigned, setDateSigned] = useState(todayIso());
+  const [triedSubmit, setTriedSubmit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -69,13 +71,18 @@ export default function RespondPage() {
   const draftKey = notice && !alreadySigned ? `writeup-${notice.id}` : null;
   useDraft(draftKey, { agreement, comments, signature, dateSigned }, (saved) => {
     setAgreement(saved.agreement || ""); setComments(saved.comments || "");
-    setSignature(saved.signature || ""); setDateSigned(saved.dateSigned || "");
+    setSignature(saved.signature || ""); setDateSigned(saved.dateSigned || todayIso());
   }, !submitted && !!(agreement || comments.trim() || signature.trim()));
 
   const required = agreement && signature && dateSigned;
 
   const handleSubmit = async () => {
-    if (!required || !notice) return;
+    if (!notice || submitting) return;
+    if (!required) {
+      setTriedSubmit(true);
+      document.getElementById(!agreement ? "agreement" : "sign-box")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     setSubmitting(true);
     setError("");
 
@@ -100,229 +107,128 @@ export default function RespondPage() {
     setSubmitting(false);
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-        <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading notice...</div>
+  const shell = (children: React.ReactNode, bar?: React.ReactNode) => (
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 0" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: C.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
+        <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
+          <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
+          </div>
+          <div style={{ color: C.white, fontSize: "1.45rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Your notice</div>
+          <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.92rem", marginTop: 4 }}>Coaching – Counseling – Disciplinary Notice. Read it, then sign below.</div>
+        </div>
+        {children}
+        {bar}
       </div>
-    );
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1rem 0.5rem 2rem", fontSize: "0.8rem", color: C.muted, textAlign: "center" }}>
+        Allied Universal Security Services · Please keep all completed forms on file for audit purposes. · rev 8/1617
+      </div>
+    </div>
+  );
+
+  if (loading) {
+    return shell(<div style={{ padding: "3rem 1.5rem", textAlign: "center", color: C.muted }}>Loading your notice…</div>);
   }
 
   if (notFound) {
-    return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-        <div style={{ textAlign: "center", color: MUTED }}>
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Notice Not Found</div>
-          <div style={{ fontSize: "0.85rem" }}>This link is invalid or has expired. Contact your supervisor.</div>
-        </div>
+    return shell(
+      <div style={{ padding: "2.5rem 1.5rem", textAlign: "center" }}>
+        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>Notice not found</div>
+        <div style={{ fontSize: "0.95rem", color: C.muted, lineHeight: 1.5 }}>This link is invalid or has expired. Please contact your supervisor.</div>
       </div>
     );
   }
 
   if (submitted) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "2rem 1rem" }}>
-        <div style={{ maxWidth: 480, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
-          <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem" }}>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem" }}>™</sup>
-            </div>
-          </div>
-          <div style={{ padding: "2.5rem 2rem" }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Acknowledgement Submitted</div>
-            <div style={{ color: MUTED, fontSize: "0.85rem", lineHeight: 1.6 }}>
-              Your response has been recorded and will be placed in your personnel file. A copy has been provided to your supervisor.
-            </div>
-          </div>
+      <DoneCard title="Acknowledgement submitted">
+        <div style={{ color: C.muted, fontSize: "0.95rem", lineHeight: 1.6 }}>
+          Your response has been recorded and will be placed in your personnel file. A copy has been provided to your supervisor.
         </div>
-      </div>
+      </DoneCard>
     );
   }
 
-  return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+  const missingItems = [!agreement && "agree or disagree", !signature && "tick the box to sign", !dateSigned && "date signed"].filter(Boolean) as string[];
+  const Block = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <Section title={title}>
+      <div style={{ fontSize: "0.98rem", lineHeight: 1.65, color: C.text, whiteSpace: "pre-wrap" }}>{children}</div>
+    </Section>
+  );
 
-        {/* Header */}
-        <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
+  return shell(
+    notice && (
+      <div style={{ padding: "0.25rem 1.25rem 1.5rem" }}>
+        <div style={{ marginTop: "1.25rem", background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "0.85rem 1rem", display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.3rem 0.9rem", fontSize: "0.92rem" }}>
+          {[
+            ["Employee", notice.officer_name],
+            ["Position", notice.position],
+            ["Site", notice.client_site],
+            ["Supervisor", notice.supervisor],
+            ["Notice date", formatDate(notice.notice_date)],
+          ].filter(([, v]) => v).map(([label, val]) => (
+            <div key={label} style={{ display: "contents" }}>
+              <span style={{ color: C.muted }}>{label}</span>
+              <span style={{ color: C.text, fontWeight: 600 }}>{val}</span>
             </div>
-            <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>There for you.</div>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ color: WHITE, fontSize: "0.9rem", fontWeight: 700 }}>Coaching – Counseling – Disciplinary Notice</div>
-            <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.75rem" }}>Employee Acknowledgement</div>
-          </div>
+          ))}
         </div>
 
-        {notice && (
-          <div style={{ padding: "0 0 2rem" }}>
-
-            {/* Notice info strip */}
-            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 2rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", fontSize: "0.78rem", color: "#374151" }}>
-              {[
-                ["Employee", notice.officer_name],
-                ["Position", notice.position],
-                ["Site", notice.client_site],
-                ["Supervisor", notice.supervisor],
-                ["Notice Date", formatDate(notice.notice_date)],
-              ].map(([label, val]) => val ? (
-                <div key={label} style={{ display: "flex", gap: 5 }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.68rem", letterSpacing: "0.05em", color: MUTED }}>{label}:</span>
-                  <span>{val}</span>
-                </div>
-              ) : null)}
+        {notice.infraction && <Block title="What happened">{notice.infraction}</Block>}
+        {notice.facts && <Block title="Details of the incident">{notice.facts}</Block>}
+        {notice.expectations && (
+          <Block title="What's expected going forward">
+            {notice.expectations}
+            <div style={{ fontSize: "0.9rem", fontWeight: 600, background: C.softBg, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.navy}`, borderRadius: 10, padding: "0.7rem 1rem", marginTop: "0.75rem" }}>
+              NOTE: Failure to correct the behavior/performance above may result in further discipline, up to and including termination of employment.
             </div>
+          </Block>
+        )}
+        {notice.consequences && <Block title="Next steps">{notice.consequences}</Block>}
+        {notice.action_type && <Block title="Corrective action">{notice.action_type}</Block>}
 
-            {/* Facts */}
-            {notice.facts && (
-              <>
-                <SectionBar label="3. Facts – Details of the Incident" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT, background: "#fefefe" }}>
-                  {notice.facts}
-                </div>
-              </>
-            )}
-
-            {/* Infraction */}
-            {notice.infraction && (
-              <>
-                <SectionBar label="2. Current Situation – Infraction / Performance Issue(s)" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", color: TEXT }}>
-                  {notice.infraction}
-                </div>
-              </>
-            )}
-
-            {/* Expectations */}
-            {notice.expectations && (
-              <>
-                <SectionBar label="4. Expectation – Future Behavior Expected" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT }}>
-                  {notice.expectations}
-                  <div style={{ fontSize: "0.78rem", fontStyle: "italic", fontWeight: 600, background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.6rem 1rem", marginTop: "0.75rem" }}>
-                    NOTE: Failure to correct the behavior/performance above may result in further discipline, up to and including termination of employment.
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Consequences */}
-            {notice.consequences && (
-              <>
-                <SectionBar label="5. Consequences – Next Steps" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT }}>
-                  {notice.consequences}
-                </div>
-              </>
-            )}
-
-            {/* Action type */}
-            {notice.action_type && (
-              <>
-                <SectionBar label="6. Documentation of Corrective Action" />
-                <div style={{ padding: "1rem 2rem", fontSize: "0.85rem", color: TEXT, fontWeight: 600 }}>
-                  {notice.action_type}
-                </div>
-              </>
-            )}
-
-            {/* Already signed */}
-            {alreadySigned ? (
-              <div style={{ padding: "1.5rem 2rem" }}>
-                <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: "1rem 1.25rem", fontSize: "0.85rem", color: "#92400e", fontWeight: 600 }}>
-                  This notice has already been acknowledged. Please contact your supervisor if you have questions.
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Section 7 - Acknowledgement */}
-                <SectionBar label="7. Acknowledgement" />
-                <div style={{ padding: "1.5rem 2rem 0" }}>
-                  <p style={{ fontSize: "0.85rem", lineHeight: 1.65, color: TEXT, marginBottom: "1rem" }}>
-                    I acknowledge that this Coaching-Counseling-Disciplinary Notice has been reviewed with me. By signing below I acknowledge a copy has been given to me, and that a copy will be placed in my personnel file.
-                  </p>
-                  <div style={{ fontSize: "0.82rem", lineHeight: 1.6, color: TEXT, fontStyle: "italic", fontWeight: 600, background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.65rem 1rem", marginBottom: "1.5rem" }}>
-                    I understand that signing this document does not constitute agreement and I may provide a rebuttal statement which will also be placed in my personnel file.
-                  </div>
-
-                  <Label>Agreement <span style={{ color: "#b3261e" }}>*</span></Label>
-                  <div style={{ display: "flex", gap: "2rem", margin: "0.5rem 0 1.5rem" }}>
-                    {["agreed", "disagreed"].map((val) => (
-                      <label key={val} onClick={() => setAgreement(agreement === val ? "" : val)} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.92rem", fontWeight: agreement === val ? 700 : 400, color: TEXT, userSelect: "none" }}>
-                        <div style={{ width: 17, height: 17, border: `2px solid ${agreement === val ? NAVY : BORDER}`, borderRadius: 2, background: agreement === val ? NAVY : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, transition: "all 0.15s" }}>
-                          {agreement === val && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
-                        </div>
-                        {val.charAt(0).toUpperCase() + val.slice(1)}
-                      </label>
-                    ))}
-                  </div>
-
-                  <Label>Employee Comments (optional — rebuttal will be placed in personnel file)</Label>
-                  <textarea value={comments} onChange={(e) => setComments(e.target.value)} placeholder="Enter any rebuttal or comments here..." rows={5} style={{ width: "100%", boxSizing: "border-box", padding: "0.6rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.88rem", color: TEXT, background: "#ffffff", fontFamily: "inherit", resize: "vertical", marginTop: 4, marginBottom: "1.25rem" }} />
-
-                  <div style={{ display: "flex", gap: "1rem" }}>
-                    <div style={{ flex: 1 }}>
-                      <Label>Employee Signature (type full name) <span style={{ color: "#b3261e" }}>*</span></Label>
-                      <input value={signature} onChange={(e) => setSignature(e.target.value)} placeholder="Full legal name" style={inputStyle} />
-                    </div>
-                    <div style={{ width: 180 }}>
-                      <Label>Date Signed <span style={{ color: "#b3261e" }}>*</span></Label>
-                      <input type="date" value={dateSigned} onChange={(e) => setDateSigned(e.target.value)} style={inputStyle} />
-                    </div>
-                  </div>
-
-                  {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c", margin: "1rem 0" }}>{error}</div>}
-
-                  <div style={{ marginTop: "1.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                    <button onClick={handleSubmit} disabled={!required || submitting} style={{ ...btnStyle(required && !submitting ? NAVY : "#9ca3af"), cursor: required && !submitting ? "pointer" : "not-allowed" }}>
-                      {submitting ? "Submitting..." : "Submit Acknowledgement"}
-                    </button>
-                    {!required && <div style={{ fontSize: "0.75rem", color: MUTED, textAlign: "center" }}>Agreement selection, signature, and date are required</div>}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
-              Allied Universal Security Services &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes. &nbsp;·&nbsp; rev 8/1617
-            </div>
+        {alreadySigned ? (
+          <div style={{ marginTop: "1.5rem", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: "1rem 1.25rem", fontSize: "0.95rem", color: "#92400e", fontWeight: 600 }}>
+            This notice has already been acknowledged. Please contact your supervisor if you have questions.
           </div>
+        ) : (
+          <Section title="Your acknowledgement">
+            <p style={{ fontSize: "0.95rem", lineHeight: 1.6, color: C.text, margin: "0 0 0.9rem" }}>
+              I acknowledge that this Coaching-Counseling-Disciplinary Notice has been reviewed with me. By signing below I acknowledge a copy has been given to me, and that a copy will be placed in my personnel file.
+            </p>
+            <div style={{ fontSize: "0.92rem", lineHeight: 1.55, color: C.text, fontWeight: 600, background: C.softBg, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.navy}`, borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.25rem" }}>
+              I understand that signing this document does not constitute agreement and I may provide a rebuttal statement which will also be placed in my personnel file.
+            </div>
+
+            <div id="agreement" style={{ marginBottom: "1.25rem" }}>
+              <Label>Do you agree with the notice?<Req /></Label>
+              <div style={chipWrap}>
+                <Chip selected={agreement === "agreed"} onClick={() => setAgreement(agreement === "agreed" ? "" : "agreed")}>Agreed</Chip>
+                <Chip selected={agreement === "disagreed"} onClick={() => setAgreement(agreement === "disagreed" ? "" : "disagreed")}>Disagreed</Chip>
+              </div>
+              <FieldError msg={triedSubmit && !agreement && "Pick one"} />
+            </div>
+
+            <div style={{ marginBottom: "1.25rem" }}>
+              <Label>Your comments or rebuttal <span style={{ color: C.muted, fontWeight: 400, fontSize: "0.85rem" }}>(optional, placed in your personnel file)</span></Label>
+              <textarea value={comments} onChange={(e) => setComments(e.target.value)} placeholder={agreement === "disagreed" ? "Explain why you disagree" : "Anything you want on record"} rows={4} style={{ ...uiInput(false), resize: "vertical", minHeight: 100, lineHeight: 1.5 }} />
+            </div>
+
+            <SignBox name={notice.officer_name || ""} signed={!!signature} onChange={(on) => setSignature(on ? (notice.officer_name || "").trim() : "")} error={triedSubmit && !signature} />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.75rem", fontSize: "0.9rem", color: C.muted }}>
+              <span>Date signed</span>
+              <input type="date" value={dateSigned} max={todayIso()} onChange={(e) => setDateSigned(e.target.value)} style={{ ...uiInput(triedSubmit && !dateSigned), width: "auto", padding: "0.5rem 0.7rem", fontSize: "0.95rem" }} />
+            </div>
+          </Section>
         )}
       </div>
-    </div>
+    ),
+    notice && !alreadySigned ? (
+      <StickyBar>
+        {triedSubmit && <MissingNote items={missingItems} />}
+        {error && <div style={{ fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>{error}</div>}
+        <PrimaryButton onClick={handleSubmit} disabled={submitting}>{submitting ? "Sending…" : "Submit acknowledgement"}</PrimaryButton>
+      </StickyBar>
+    ) : undefined
   );
-}
-
-function SectionBar({ label }: { label: string }) {
-  return (
-    <div style={{ margin: "1.75rem 2rem 0", paddingBottom: "0.5rem", borderBottom: `2px solid ${NAVY}`, color: NAVY, fontSize: "1.05rem", fontWeight: 700 }}>
-      {label}
-    </div>
-  );
-}
-
-function Label({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
-      {children}
-    </div>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
-  border: "1px solid #d1d5db", borderRadius: 12, fontSize: "1rem",
-  color: "#1a1a2e", background: "#ffffff", outline: "none", fontFamily: "inherit", marginBottom: "1rem",
-};
-
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.04em", cursor: "pointer", fontFamily: "inherit", textTransform: "uppercase", width: "100%" };
 }

@@ -4,10 +4,10 @@
 // Nothing else is touched: form submissions and database calls go straight
 // to the network, and the page's own outbox handles sending later.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const PAGES = `allied-pages-${VERSION}`;
 const STATIC = `allied-static-${VERSION}`;
-const OFFICER_PAGES = ["/forms", "/calloff", "/dar", "/dar/my-dars", "/timeoff"];
+const OFFICER_PAGES = ["/", "/forms", "/calloff", "/dar", "/dar/my-dars", "/timeoff"];
 
 async function precache() {
   const pages = await caches.open(PAGES);
