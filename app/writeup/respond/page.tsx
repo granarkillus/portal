@@ -4,14 +4,7 @@ import { useState, useEffect } from "react";
 import { getPublicSupabase } from "@/lib/supabase";
 import { useDraft, clearDraft } from "@/lib/drafts";
 import { C, Section, Label, Req, FieldError, SignBox, StickyBar, PrimaryButton, MissingNote, DoneCard, Chip, chipWrap, inputStyle as uiInput, todayIso } from "@/components/ui";
-
-const NAVY = "#1a4480";
-const DARK = "#243b5e";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
+import { fmtDateFull } from "@/lib/format";
 
 interface Notice {
   id: string;
@@ -45,12 +38,6 @@ export default function RespondPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = iso.split("T")[0];
-    const [y, m, day] = d.split("-");
-    return `${m}/${day}/${y}`;
-  };
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -165,7 +152,7 @@ export default function RespondPage() {
             ["Position", notice.position],
             ["Site", notice.client_site],
             ["Supervisor", notice.supervisor],
-            ["Notice date", formatDate(notice.notice_date)],
+            ["Notice date", fmtDateFull(notice.notice_date)],
           ].filter(([, v]) => v).map(([label, val]) => (
             <div key={label} style={{ display: "contents" }}>
               <span style={{ color: C.muted }}>{label}</span>
@@ -188,7 +175,7 @@ export default function RespondPage() {
         {notice.action_type && <Block title="Corrective action">{notice.action_type}</Block>}
 
         {alreadySigned ? (
-          <div style={{ marginTop: "1.5rem", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: "1rem 1.25rem", fontSize: "0.95rem", color: "#92400e", fontWeight: 600 }}>
+          <div style={{ marginTop: "1.5rem", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 12, padding: "1rem 1.25rem", fontSize: "0.95rem", color: C.amber, fontWeight: 600 }}>
             This notice has already been acknowledged. Please contact your supervisor if you have questions.
           </div>
         ) : (

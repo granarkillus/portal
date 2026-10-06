@@ -8,21 +8,15 @@ import { newId, sendOrQueue } from "@/lib/outbox";
 import DraftNotice from "@/components/draft-notice";
 import HourSelect from "@/components/hour-select";
 import { POSTS } from "@/lib/posts";
+import { C, btnStyle } from "@/lib/theme";
+import { fmtDate, fmtTime, fmtStamp } from "@/lib/format";
+import Icon from "@/components/icon";
 
 const getSupabase = () =>
   createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
-const RED = "#b91c1c";
 
 const REASONS = ["Illness", "Family emergency", "Personal emergency", "Bereavement", "Medical appointment", "Other"];
 
@@ -114,11 +108,6 @@ export default function CallOffForm() {
   const set = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const [y, m, d] = iso.split("-");
-    return `${m}/${d}/${y}`;
-  };
 
   // Notice type is worked out from the shift start, not picked by hand.
   const minsUntil = minutesUntilShift(form.shiftDate, form.shiftStart);
@@ -184,7 +173,7 @@ export default function CallOffForm() {
       signature: officerName,
       document_url: docUrl,
       submitted_at: timestamp,
-    }, `Call-off for ${formatDate(form.shiftDate)} (${form.post.trim()})`);
+    }, `Call-off for ${fmtDate(form.shiftDate)} (${form.post.trim()})`);
 
     if (result.status === "failed") {
       setError("Submission failed. Please check your connection and try again.");
@@ -197,10 +186,10 @@ export default function CallOffForm() {
     rememberOfficer({ name: officerName, employeeNumber: form.employeeNumber.trim(), post: form.post.trim() });
 
     setSubmittedData({
-      name: officerName, post: form.post.trim(), shiftDate: formatDate(form.shiftDate),
-      shiftStart: form.shiftStart, shiftEnd: form.shiftEnd, noticeType,
+      name: officerName, post: form.post.trim(), shiftDate: fmtDate(form.shiftDate),
+      shiftStart: fmtTime(form.shiftStart), shiftEnd: fmtTime(form.shiftEnd), noticeType,
       reason: reasonText,
-      timestamp: new Date(timestamp).toLocaleString("en-US", { month: "numeric", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true }),
+      timestamp: fmtStamp(timestamp),
     });
 
     setSubmitted(true);
@@ -245,43 +234,43 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
 
   if (submitted && submittedData) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "2rem 1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ maxWidth: 560, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+      <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "2rem 1rem", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ maxWidth: 560, width: "100%", background: C.white, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
           <div className="hdr" style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>
-              <div style={{ color: WHITE, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup></div>
+              <div style={{ color: C.white, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup></div>
               <div style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", marginTop: 2 }}>Security Services</div>
             </div>
-            <div style={{ textAlign: "right" }}><div style={{ color: WHITE, fontSize: "0.88rem", fontWeight: 700 }}>{queued ? "Call-Off Saved" : "Call-Off Submitted"}</div></div>
+            <div style={{ textAlign: "right" }}><div style={{ color: C.white, fontSize: "0.88rem", fontWeight: 700 }}>{queued ? "Call-Off Saved" : "Call-Off Submitted"}</div></div>
           </div>
           <div style={{ padding: "1.5rem 2rem" }}>
             {queued ? (
-              <div style={{ background: "#fff7ed", border: "1px solid #fdba74", borderLeft: "4px solid #c2410c", borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem", fontSize: "0.9rem", color: "#7c2d12", lineHeight: 1.5 }}>
-                <div style={{ fontWeight: 700, fontSize: "0.98rem", marginBottom: 4 }}>⏳ No signal. Your call-off is saved on this phone.</div>
+              <div style={{ background: C.orangeTint, border: "1px solid #fdba74", borderLeft: "4px solid #c2410c", borderRadius: 12, padding: "0.9rem 1rem", marginBottom: "1rem", fontSize: "0.9rem", color: "#7c2d12", lineHeight: 1.5 }}>
+                <div style={{ fontWeight: 700, fontSize: "0.98rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}><Icon name="wifiOff" size={18} />No signal. Your call-off is saved on this phone.</div>
                 It will send automatically, and your supervisor will be emailed, as soon as you&apos;re back online. Open this app again when you have signal. <strong>If your shift is soon, call your supervisor too.</strong>
               </div>
             ) : (<>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1.25rem" }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: C.greenTint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: TEXT }}>Call-off recorded</div>
-                <div style={{ fontSize: "0.78rem", color: MUTED }}>{submittedData.timestamp}</div>
+                <div style={{ fontWeight: 700, fontSize: "0.95rem", color: C.text }}>Call-off recorded</div>
+                <div style={{ fontSize: "0.78rem", color: C.muted }}>{submittedData.timestamp}</div>
               </div>
             </div>
-            <div style={{ background: "#e8f5e9", border: "1px solid #b7dcbf", borderLeft: `4px solid ${GREEN}`, borderRadius: 12, padding: "0.85rem 1rem", marginBottom: "1rem", fontSize: "0.85rem", color: "#1e4d27", lineHeight: 1.5 }}>
+            <div style={{ background: C.greenTint, border: "1px solid #b7dcbf", borderLeft: `4px solid ${C.green}`, borderRadius: 12, padding: "0.85rem 1rem", marginBottom: "1rem", fontSize: "0.85rem", color: "#1e4d27", lineHeight: 1.5 }}>
               Your supervisor has been emailed your call-off. Thank you for your submission. Keep the receipt below for your records.
             </div>
             </>)}
-            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Your Receipt</div>
-            <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem", marginBottom: "1rem", fontSize: "0.82rem", color: TEXT, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+            <div style={{ fontSize: "0.72rem", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>Your Receipt</div>
+            <div style={{ background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "1rem", marginBottom: "1rem", fontSize: "0.82rem", color: C.text, lineHeight: 1.7, whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
               {getCopyMessage()}
             </div>
-            <button onClick={handleCopy} style={{ ...btnStyle(copySuccess ? GREEN : NAVY), marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+            <button onClick={handleCopy} style={{ ...btnStyle(copySuccess ? C.green : C.navy), marginBottom: "1rem", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
               {copySuccess ? "✓ Receipt Copied" : "Copy Receipt"}
             </button>
-            <button onClick={handleReset} style={{ ...btnStyle("transparent"), color: MUTED, border: `1px solid ${BORDER}`, fontSize: "0.78rem" }}>Submit Another</button>
+            <button onClick={handleReset} style={{ ...btnStyle("transparent"), color: C.muted, border: `1px solid ${C.border}`, fontSize: "0.78rem" }}>Submit Another</button>
           </div>
         </div>
       </div>
@@ -291,11 +280,11 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
   const isLate = noticeType === NOTICE_UNDER4;
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 0" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto", background: WHITE, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 0" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: C.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
         <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
-          <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup></div>
-          <div style={{ color: WHITE, fontSize: "1.5rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Can&apos;t make your shift?</div>
+          <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup></div>
+          <div style={{ color: C.white, fontSize: "1.5rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Can&apos;t make your shift?</div>
           <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.95rem", marginTop: 4 }}>Call off here. Your supervisor is emailed right away.</div>
         </div>
 
@@ -308,7 +297,7 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
               <input value={form.officerName} onChange={set("officerName")} placeholder="First and last name" autoComplete="name" style={inputStyle(!!errorFor("officerName"))} />
               <FieldError msg={errorFor("officerName")} />
               {remembered && (
-                <div style={{ fontSize: "0.85rem", color: MUTED, marginTop: 6 }}>
+                <div style={{ fontSize: "0.85rem", color: C.muted, marginTop: 6 }}>
                   Filled in from your last form. <button type="button" onClick={notForgetMe} style={linkBtn}>Not you?</button>
                 </div>
               )}
@@ -361,13 +350,13 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
             </div>
 
             {minsUntil !== null && (
-              <div style={{ marginTop: "1rem", borderRadius: 12, padding: "0.9rem 1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start", background: isLate ? "#fff7ed" : "#ecfdf3", border: `1px solid ${isLate ? "#fdba74" : "#a7f3c0"}` }}>
-                <div style={{ fontSize: "1.25rem", lineHeight: 1 }}>{isLate ? "⚠️" : "✅"}</div>
+              <div style={{ marginTop: "1rem", borderRadius: 12, padding: "0.9rem 1rem", display: "flex", gap: "0.75rem", alignItems: "flex-start", background: isLate ? C.orangeTint : "#ecfdf3", border: `1px solid ${isLate ? "#fdba74" : "#a7f3c0"}` }}>
+                <Icon name={isLate ? "alert" : "checkCircle"} size={22} color={isLate ? C.orange : "#166534"} style={{ marginTop: 1 }} />
                 <div>
-                  <div style={{ fontWeight: 700, color: isLate ? "#9a3412" : "#166534", fontSize: "0.98rem" }}>
+                  <div style={{ fontWeight: 700, color: isLate ? C.orange : "#166534", fontSize: "0.98rem" }}>
                     {isLate ? "Less than 4 hours' notice" : "4+ hours' notice"}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: isLate ? "#9a3412" : "#166534", marginTop: 2, lineHeight: 1.45 }}>
+                  <div style={{ fontSize: "0.9rem", color: isLate ? C.orange : "#166534", marginTop: 2, lineHeight: 1.45 }}>
                     {minsUntil < 0
                       ? `Your shift started ${formatDuration(minsUntil)} ago.`
                       : `Your shift starts in ${formatDuration(minsUntil)}.`}
@@ -409,49 +398,49 @@ ${queued ? "Saved on this phone (no signal). It will send and email your supervi
 
             <div style={{ marginTop: "1.25rem" }}>
               <Label>Doctor&apos;s note or document</Label>
-              <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "0.5rem" }}>Needed if you&apos;re out 3 or more days in a row. Photo or PDF.</div>
+              <div style={{ fontSize: "0.85rem", color: C.muted, marginBottom: "0.5rem" }}>Needed if you&apos;re out 3 or more days in a row. Photo or PDF.</div>
               <input id="doc-upload" type="file" accept=".jpg,.jpeg,.png,.pdf,image/*" style={{ display: "none" }} onChange={(e) => setFile(e.target.files?.[0] || null)} />
               {file ? (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", border: `1.5px solid ${NAVY}`, background: "#eaf1fb", borderRadius: 12, padding: "0.75rem 1rem" }}>
-                  <span style={{ fontSize: "1.1rem" }}>📎</span>
-                  <span style={{ flex: 1, fontSize: "0.92rem", color: NAVY, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", border: `1.5px solid ${C.navy}`, background: C.navyTint, borderRadius: 12, padding: "0.75rem 1rem" }}>
+                  <Icon name="paperclip" size={18} color={C.navy} />
+                  <span style={{ flex: 1, fontSize: "0.92rem", color: C.navy, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
                   <button type="button" onClick={() => setFile(null)} style={linkBtn}>Remove</button>
                 </div>
               ) : (
-                <button type="button" onClick={() => document.getElementById("doc-upload")?.click()} style={{ width: "100%", border: `2px dashed ${BORDER}`, background: WHITE, borderRadius: 12, padding: "1rem", fontSize: "0.95rem", color: NAVY, fontWeight: 600, fontFamily: "inherit" }}>
-                  📷 Add a photo or file
+                <button type="button" onClick={() => document.getElementById("doc-upload")?.click()} style={{ width: "100%", border: `2px dashed ${C.border}`, background: C.white, borderRadius: 12, padding: "1rem", fontSize: "0.95rem", color: C.navy, fontWeight: 600, fontFamily: "inherit" }}>
+                  <Icon name="camera" size={18} style={{ marginRight: 8 }} />Add a photo or file
                 </button>
               )}
             </div>
           </Section>
 
           <div id="confirm" style={{ marginTop: "1.75rem" }}>
-            <label style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer", border: `1.5px solid ${errorFor("confirm") ? RED : confirmed ? NAVY : BORDER}`, background: confirmed ? "#eaf1fb" : WHITE, borderRadius: 12, padding: "1rem" }}>
-              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ width: 24, height: 24, marginTop: 1, accentColor: NAVY, flexShrink: 0 }} />
-              <span style={{ fontSize: "0.95rem", color: TEXT, lineHeight: 1.5 }}>
+            <label style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer", border: `1.5px solid ${errorFor("confirm") ? C.red : confirmed ? C.navy : C.border}`, background: confirmed ? C.navyTint : C.white, borderRadius: 12, padding: "1rem" }}>
+              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} style={{ width: 24, height: 24, marginTop: 1, accentColor: C.navy, flexShrink: 0 }} />
+              <span style={{ fontSize: "0.95rem", color: C.text, lineHeight: 1.5 }}>
                 I confirm this is accurate and submitted under AUS attendance policy.
-                {form.officerName.trim() && <span style={{ display: "block", marginTop: 4, color: MUTED, fontSize: "0.88rem" }}>Signed: <strong style={{ color: TEXT }}>{form.officerName.trim()}</strong></span>}
+                {form.officerName.trim() && <span style={{ display: "block", marginTop: 4, color: C.muted, fontSize: "0.88rem" }}>Signed: <strong style={{ color: C.text }}>{form.officerName.trim()}</strong></span>}
               </span>
             </label>
             <FieldError msg={errorFor("confirm")} />
           </div>
 
-          {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.85rem 1rem", fontSize: "0.92rem", color: RED, marginTop: "1rem" }}>{error}</div>}
+          {error && <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderRadius: 12, padding: "0.85rem 1rem", fontSize: "0.92rem", color: C.red, marginTop: "1rem" }}>{error}</div>}
         </div>
 
-        <div style={{ position: "sticky", bottom: 0, background: "rgba(255,255,255,0.97)", borderTop: `1px solid ${BORDER}`, padding: "0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom))", backdropFilter: "blur(6px)" }}>
+        <div style={{ position: "sticky", bottom: 0, background: "rgba(255,255,255,0.97)", borderTop: `1px solid ${C.border}`, padding: "0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom))", backdropFilter: "blur(6px)" }}>
           {showErrors && missing.length > 0 && (
-            <div style={{ fontSize: "0.88rem", color: RED, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>
+            <div style={{ fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>
               {missing.length === 1 ? missing[0].msg : `${missing.length} things left: ${missing.map((m) => m.msg.toLowerCase()).join(", ")}`}
             </div>
           )}
-          <button type="button" onClick={handleSubmit} disabled={submitting} style={{ width: "100%", minHeight: 54, background: submitting ? "#94a3b8" : NAVY, color: WHITE, border: "none", borderRadius: 12, fontSize: "1.05rem", fontWeight: 700, fontFamily: "inherit" }}>
+          <button type="button" onClick={handleSubmit} disabled={submitting} style={{ width: "100%", minHeight: 54, background: submitting ? C.faint : C.navy, color: C.white, border: "none", borderRadius: 12, fontSize: "1.05rem", fontWeight: 700, fontFamily: "inherit" }}>
             {submitting ? "Sending…" : "Submit call-off"}
           </button>
         </div>
       </div>
 
-      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1rem 0.5rem 2rem", fontSize: "0.8rem", color: MUTED, textAlign: "center" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", padding: "1rem 0.5rem 2rem", fontSize: "0.8rem", color: C.muted, textAlign: "center" }}>
         Allied Universal Security Services · Washington University · All submissions are timestamped and logged.
       </div>
     </div>
@@ -462,8 +451,8 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
   return (
     <div style={{ marginTop: "1.75rem" }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem", marginBottom: "0.9rem" }}>
-        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>{title}</div>
-        {subtitle && <div style={{ fontSize: "0.85rem", color: MUTED }}>{subtitle}</div>}
+        <div style={{ fontSize: "1.15rem", fontWeight: 700, color: C.text }}>{title}</div>
+        {subtitle && <div style={{ fontSize: "0.85rem", color: C.muted }}>{subtitle}</div>}
       </div>
       {children}
     </div>
@@ -471,20 +460,20 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
 }
 
 function Label({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#334155", marginBottom: 8 }}>{children}</div>;
+  return <div style={{ fontSize: "0.95rem", fontWeight: 600, color: C.slate, marginBottom: 8 }}>{children}</div>;
 }
 
 function Req() {
-  return <span style={{ color: RED }} aria-label="required">*</span>;
+  return <span style={{ color: C.red }} aria-label="required">*</span>;
 }
 
 function Optional() {
-  return <span style={{ color: MUTED, fontWeight: 400, fontSize: "0.85rem" }}>(optional)</span>;
+  return <span style={{ color: C.muted, fontWeight: 400, fontSize: "0.85rem" }}>(optional)</span>;
 }
 
 function FieldError({ msg }: { msg?: string }) {
   if (!msg) return null;
-  return <div style={{ color: RED, fontSize: "0.88rem", fontWeight: 600, marginTop: 6 }}>{msg}</div>;
+  return <div style={{ color: C.red, fontSize: "0.88rem", fontWeight: 600, marginTop: 6 }}>{msg}</div>;
 }
 
 function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
@@ -496,9 +485,9 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       style={{
         minHeight: 46, padding: "0.55rem 1rem", borderRadius: 999, fontFamily: "inherit",
         fontSize: "0.95rem", fontWeight: 600,
-        border: `1.5px solid ${selected ? NAVY : BORDER}`,
-        background: selected ? NAVY : WHITE,
-        color: selected ? WHITE : TEXT,
+        border: `1.5px solid ${selected ? C.navy : C.border}`,
+        background: selected ? C.navy : C.white,
+        color: selected ? C.white : C.text,
         boxShadow: selected ? "0 2px 8px rgba(26,68,128,0.25)" : "none",
       }}
     >
@@ -509,12 +498,9 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
 
 const chipWrap: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.5rem" };
 
-const linkBtn: React.CSSProperties = { background: "none", border: "none", padding: 0, minHeight: 0, color: NAVY, fontWeight: 600, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" };
+const linkBtn: React.CSSProperties = { background: "none", border: "none", padding: 0, minHeight: 0, color: C.navy, fontWeight: 600, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "inherit" };
 
 function inputStyle(hasError: boolean): React.CSSProperties {
-  return { width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem", border: `1.5px solid ${hasError ? RED : BORDER}`, borderRadius: 12, fontSize: "1rem", color: TEXT, background: WHITE, fontFamily: "inherit" };
+  return { width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem", border: `1.5px solid ${hasError ? C.red : C.border}`, borderRadius: 12, fontSize: "1rem", color: C.text, background: C.white, fontFamily: "inherit" };
 }
 
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.85rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
-}

@@ -4,15 +4,10 @@ import { useState, useEffect, Fragment } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildTimeOffFormDocument, TimeOffRequest } from "./timeoff-form-template";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
-
-const NAVY = "#1a4480";
-const DARK = "#243b5e";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
+import { C, btnStyle } from "@/lib/theme";
+import { fmtDate } from "@/lib/format";
+import Icon from "@/components/icon";
+import { Skeleton, toast } from "@/components/feedback";
 
 export default function RequestsPage() {
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
@@ -34,12 +29,6 @@ export default function RequestsPage() {
     });
   }, []);
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = iso.split("T")[0];
-    const [y, m, day] = d.split("-");
-    return `${m}/${day}/${y}`;
-  };
 
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
   const isUpcoming = (r: TimeOffRequest) => (r.requested_dates || []).some((d) => d >= today);
@@ -76,17 +65,18 @@ export default function RequestsPage() {
     const now = new Date().toISOString();
     setRequests((rs) => rs.map((x) => (x.id === r.id ? { ...x, printed_at: now } : x)));
     getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
+    toast("Marked as printed");
   };
 
   const printedBadge = (r: TimeOffRequest) => r.printed_at
-    ? <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: MUTED, border: `1px solid ${BORDER}` }}>Printed {formatDate(r.printed_at)}</span>
-    : <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: "1px solid #bcd0ec" }}>New</span>;
+    ? <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: C.muted, border: `1px solid ${C.border}` }}>Printed {fmtDate(r.printed_at)}</span>
+    : <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: C.navyTint, color: C.navy, border: "1px solid #bcd0ec" }}>New</span>;
 
   const statusBadge = (status: string) => {
     const styles: Record<string, { bg: string; color: string; border: string }> = {
-      pending: { bg: "#fff3cd", color: "#92400e", border: "#fcd34d" },
-      approved: { bg: "#e8f5e9", color: GREEN, border: "#a5d6a7" },
-      rejected: { bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5" },
+      pending: { bg: C.amberTint, color: C.amber, border: C.amberLine },
+      approved: { bg: C.greenTint, color: C.green, border: C.greenLine },
+      rejected: { bg: C.redTint, color: C.red, border: C.redLine },
     };
     const s = styles[status] || styles.pending;
     return (
@@ -115,19 +105,19 @@ export default function RequestsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         <SupervisorHeader title="Time-off requests" active="timeoff" />
 
-        <StatStrip items={[["New (not printed)", newCount, NAVY], ["Off today", offToday], ["Upcoming", upcomingCount], ["Total", requests.length]]} action={<a href="/supervisor/calendar" style={{ display: "inline-block", background: NAVY, color: "#fff", textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem" }}>📅 Calendar</a>} />
+        <StatStrip items={[["New (not printed)", newCount, C.navy], ["Off today", offToday], ["Upcoming", upcomingCount], ["Total", requests.length]]} action={<a href="/supervisor/calendar" style={{ display: "inline-flex", background: C.navy, color: C.white, textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem", alignItems: "center", gap: 6 }}><Icon name="calendar" size={16} />Calendar</a>} />
 
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer, type, or dates..."
-            style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.85rem", color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit" }} />
+            style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${C.border}`, borderRadius: 12, fontSize: "0.85rem", color: C.text, background: C.white, outline: "none", fontFamily: "inherit" }} />
           <div style={{ display: "flex", gap: "0.5rem" }}>
             {["all", "new", "upcoming", "printed"].map((f) => (
-              <button key={f} onClick={() => setFilter(f)} style={{ padding: "0.4rem 0.9rem", borderRadius: 12, fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${filter === f ? NAVY : BORDER}`, background: filter === f ? NAVY : WHITE, color: filter === f ? WHITE : MUTED, cursor: "pointer", fontFamily: "inherit", textTransform: "capitalize" }}>
+              <button key={f} onClick={() => setFilter(f)} style={{ padding: "0.55rem 0.9rem", borderRadius: 12, fontSize: "0.85rem", fontWeight: 700, border: `1px solid ${filter === f ? C.navy : C.border}`, background: filter === f ? C.navy : C.white, color: filter === f ? C.white : C.muted, cursor: "pointer", fontFamily: "inherit", textTransform: "capitalize" }}>
                 {f === "new" ? "New" : f === "upcoming" ? "Upcoming" : f === "printed" ? "Printed" : "All"}
               </button>
             ))}
@@ -135,45 +125,42 @@ export default function RequestsPage() {
         </div>
 
         {loading ? (
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "2rem", textAlign: "center", color: MUTED, fontSize: "0.85rem" }}>Loading requests...</div>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", borderRadius: "0 0 16px 16px", overflow: "hidden" }}><Skeleton rows={5} card={false} /></div>
         ) : filtered.length === 0 ? (
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "2rem", textAlign: "center", color: MUTED, fontSize: "0.85rem" }}>No requests found.</div>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", padding: "2rem", textAlign: "center", color: C.muted, fontSize: "0.85rem" }}>No requests found.</div>
         ) : (
           ordered.map((r, idx) => (
             <Fragment key={r.id}>
             {groupHeading(idx) && (
-              <div style={{ background: SOFT_BG, borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, padding: "0.6rem 1.25rem", fontSize: "0.85rem", fontWeight: 700, color: r.printed_at ? MUTED : NAVY }}>{groupHeading(idx)}</div>
+              <div style={{ background: C.softBg, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: "0.6rem 1.25rem", fontSize: "0.85rem", fontWeight: 700, color: r.printed_at ? C.muted : C.navy }}>{groupHeading(idx)}</div>
             )}
-            <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+            <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: 4 }}>
-                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.92rem", color: C.text }}>{r.officer_name}</span>
                   {printedBadge(r)}
                   {r.status !== "pending" && statusBadge(r.status)}
                 </div>
-                <div style={{ fontSize: "0.78rem", color: MUTED }}>
-                  <span style={{ fontWeight: 600, color: TEXT }}>{r.absence_type}</span>
+                <div style={{ fontSize: "0.78rem", color: C.muted }}>
+                  <span style={{ fontWeight: 600, color: C.text }}>{r.absence_type}</span>
                   {r.dates_requested && <> &nbsp;·&nbsp; {r.dates_requested}</>}
                   {r.manager && <> &nbsp;·&nbsp; Manager: {r.manager}</>}
-                  &nbsp;·&nbsp; Submitted: {formatDate(r.submitted_at)}
+                  &nbsp;·&nbsp; Submitted {fmtDate(r.submitted_at)}
                 </div>
-                {r.reason && <div style={{ fontSize: "0.78rem", color: MUTED, marginTop: 2 }}>{r.reason}</div>}
+                {r.reason && <div style={{ fontSize: "0.78rem", color: C.muted, marginTop: 2 }}>{r.reason}</div>}
               </div>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <button
                   onClick={() => { generateBlankManagerPDF(r); markPrinted(r); }}
-                  style={{ background: r.printed_at ? WHITE : NAVY, border: `1px solid ${r.printed_at ? BORDER : NAVY}`, borderRadius: 999, color: r.printed_at ? NAVY : WHITE, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
+                  style={{ background: r.printed_at ? C.white : C.navy, border: `1px solid ${r.printed_at ? C.border : C.navy}`, borderRadius: 999, color: r.printed_at ? C.navy : C.white, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                  </svg>
+                  <Icon name="printer" size={14} />
                   {r.printed_at ? "Print again" : "Print"}
                 </button>
                 {r.status !== "pending" && (
                   <button
                     onClick={() => { generatePDF(r); markPrinted(r); }}
-                    style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, padding: "0.4rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
+                    style={{ background: "none", border: `1px solid ${C.border}`, borderRadius: 12, color: C.muted, padding: "0.55rem 0.75rem", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -185,7 +172,7 @@ export default function RequestsPage() {
                   </button>
                 )}
                 <a href={r.status === "pending" ? `/timeoff/approve?id=${r.id}` : `/timeoff/view?id=${r.id}`}
-                  style={{ background: "none", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 999, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, display: "inline-block", textDecoration: "none", textAlign: "center" as const }}>
+                  style={{ background: "none", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 999, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, display: "inline-block", textDecoration: "none", textAlign: "center" as const }}>
                   Open
                 </a>
               </div>
@@ -194,7 +181,7 @@ export default function RequestsPage() {
           ))
         )}
 
-        <div style={{ marginTop: "1rem", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
+        <div style={{ marginTop: "1rem", fontSize: "0.72rem", color: C.muted, textAlign: "center" }}>
           Allied Universal Security Services &nbsp;·&nbsp; Washington University &nbsp;·&nbsp; Keep all completed forms on file for audit purposes.
         </div>
       </div>
@@ -202,6 +189,3 @@ export default function RequestsPage() {
   );
 }
 
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
-}

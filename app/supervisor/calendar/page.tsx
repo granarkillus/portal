@@ -5,13 +5,10 @@ import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { parseRequestedDates } from "@/lib/parse-dates";
 import { buildTimeOffFormDocument, TimeOffRequest } from "@/app/timeoff/requests/timeoff-form-template";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
-
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
+import { C } from "@/lib/theme";
+import { fmtDate, fmtStamp } from "@/lib/format";
+import Icon from "@/components/icon";
+import { PageSkeleton, toast } from "@/components/feedback";
 
 interface Row {
   id: string;
@@ -32,9 +29,9 @@ interface Req extends Row { dates: string[]; needsCheck: boolean }
 // who asked for a day off shows the same way. Only a recorded denial looks
 // different (greyed out, hidden unless "Show denied" is on).
 const STATUS: Record<string, { label: string; bg: string; fg: string; border: string; dot: string }> = {
-  pending: { label: "Requested", bg: "#eaf1fb", fg: "#1a4480", border: "#bcd0ec", dot: "#1a4480" },
-  approved: { label: "Approved", bg: "#eaf1fb", fg: "#1a4480", border: "#bcd0ec", dot: "#1a4480" },
-  rejected: { label: "Denied", bg: "#f1f5f9", fg: "#64748b", border: "#cbd5e1", dot: "#94a3b8" },
+  pending: { label: "Requested", bg: C.navyTint, fg: C.navy, border: "#bcd0ec", dot: C.navy },
+  approved: { label: "Approved", bg: C.navyTint, fg: C.navy, border: "#bcd0ec", dot: C.navy },
+  rejected: { label: "Denied", bg: "#f1f5f9", fg: "#64748b", border: "#cbd5e1", dot: C.faint },
 };
 const statusOf = (s: string) => STATUS[s] || STATUS.pending;
 
@@ -134,13 +131,13 @@ export default function TimeOffCalendar() {
   };
 
   if (loading) {
-    return <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", color: MUTED, fontFamily: "var(--font-sans)" }}>Loading calendar…</div>;
+    return <PageSkeleton width={1100} />;
   }
 
   const dayList = selectedDay ? byDay.get(selectedDay) || [] : [];
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1.25rem 0.75rem 3rem" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1.25rem 0.75rem 3rem" }}>
       <style>{`
         .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
         .cal-cell { min-height: 108px; }
@@ -156,23 +153,23 @@ export default function TimeOffCalendar() {
 
         <SupervisorHeader title="Time-off calendar" subtitle="Who's off, day by day" active="calendar" />
 
-        <div style={{ background: WHITE, borderRadius: "0 0 16px 16px", boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", padding: "1rem 1rem 1.25rem" }}>
-          {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>{error}</div>}
+        <div style={{ background: C.white, borderRadius: "0 0 16px 16px", boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", padding: "1rem 1rem 1.25rem" }}>
+          {error && <div style={{ background: C.redTint, border: "1px solid #fca5a5", color: C.red, borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>{error}</div>}
 
           {needsCheck.length > 0 && (
-            <div style={{ background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
-              <div style={{ fontWeight: 700, color: "#9a3412", marginBottom: 6 }}>
-                ⚠️ {needsCheck.length === 1 ? "1 request needs its dates checked" : `${needsCheck.length} requests need their dates checked`}
+            <div style={{ background: C.orangeTint, border: "1px solid #fdba74", borderRadius: 12, padding: "0.85rem 1rem", marginBottom: "1rem" }}>
+              <div style={{ fontWeight: 700, color: C.orange, marginBottom: 6 }}>
+                <Icon name="alert" size={16} style={{ marginRight: 6 }} />{needsCheck.length === 1 ? "1 request needs its dates checked" : `${needsCheck.length} requests need their dates checked`}
               </div>
-              <div style={{ fontSize: "0.88rem", color: "#9a3412", marginBottom: 8 }}>We couldn&apos;t read these dates for sure. Tap one to confirm or fix it.</div>
+              <div style={{ fontSize: "0.88rem", color: C.orange, marginBottom: 8 }}>We couldn&apos;t read these dates for sure. Tap one to confirm or fix it.</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {needsCheck.map((r) => (
-                  <button key={r.id} type="button" onClick={() => setFixing(r)} style={{ textAlign: "left", background: WHITE, border: "1px solid #fed7aa", borderRadius: 10, padding: "0.6rem 0.8rem", cursor: "pointer", fontFamily: "inherit", display: "flex", gap: 10, alignItems: "center", minHeight: 0 }}>
+                  <button key={r.id} type="button" onClick={() => setFixing(r)} style={{ textAlign: "left", background: C.white, border: "1px solid #fed7aa", borderRadius: 10, padding: "0.6rem 0.8rem", cursor: "pointer", fontFamily: "inherit", display: "flex", gap: 10, alignItems: "center", minHeight: 0 }}>
                     <span style={{ flex: 1 }}>
-                      <strong style={{ color: TEXT }}>{r.officer_name}</strong>
-                      <span style={{ color: MUTED }}> wrote “{r.dates_requested.trim()}”</span>
+                      <strong style={{ color: C.text }}>{r.officer_name}</strong>
+                      <span style={{ color: C.muted }}> wrote “{r.dates_requested.trim()}”</span>
                     </span>
-                    <span style={{ color: NAVY, fontWeight: 700, fontSize: "0.88rem", whiteSpace: "nowrap" }}>Check dates ›</span>
+                    <span style={{ color: C.navy, fontWeight: 700, fontSize: "0.88rem", whiteSpace: "nowrap" }}>Check dates ›</span>
                   </button>
                 ))}
               </div>
@@ -181,21 +178,21 @@ export default function TimeOffCalendar() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.85rem" }}>
             <button type="button" onClick={() => move(-1)} style={navBtn} aria-label="Previous month">‹</button>
-            <div style={{ fontSize: "1.2rem", fontWeight: 700, color: TEXT, minWidth: 170, textAlign: "center" }}>{monthLabel}</div>
+            <div style={{ fontSize: "1.2rem", fontWeight: 700, color: C.text, minWidth: 170, textAlign: "center" }}>{monthLabel}</div>
             <button type="button" onClick={() => move(1)} style={navBtn} aria-label="Next month">›</button>
             <button type="button" onClick={() => setCursor({ y: +now.slice(0, 4), m: +now.slice(5, 7) - 1 })} style={{ ...navBtn, width: "auto", padding: "0 0.9rem", fontSize: "0.88rem" }}>Today</button>
             <div style={{ flex: 1 }} />
             {requests.some((r) => r.status === "rejected") && (
-              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", color: MUTED, cursor: "pointer" }}>
-                <input type="checkbox" checked={showDenied} onChange={(e) => setShowDenied(e.target.checked)} style={{ width: 18, height: 18, accentColor: NAVY }} />
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", color: C.muted, cursor: "pointer" }}>
+                <input type="checkbox" checked={showDenied} onChange={(e) => setShowDenied(e.target.checked)} style={{ width: 18, height: 18, accentColor: C.navy }} />
                 Show denied
               </label>
             )}
           </div>
 
-          <div className="cal-grid" style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
+          <div className="cal-grid" style={{ border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
             {WEEKDAYS.map((w) => (
-              <div key={w} style={{ background: SOFT_BG, padding: "0.45rem 0.25rem", textAlign: "center", fontSize: "0.75rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: `1px solid ${BORDER}` }}>{w}</div>
+              <div key={w} style={{ background: C.softBg, padding: "0.45rem 0.25rem", textAlign: "center", fontSize: "0.75rem", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: `1px solid ${C.border}` }}>{w}</div>
             ))}
             {cells.map((d, i) => {
               const list = d ? byDay.get(d) || [] : [];
@@ -207,10 +204,10 @@ export default function TimeOffCalendar() {
                   className="cal-cell"
                   onClick={() => d && setSelectedDay(d === selectedDay ? null : d)}
                   style={{
-                    borderRight: (i + 1) % 7 ? `1px solid ${BORDER}` : "none",
-                    borderTop: i >= 7 ? `1px solid ${BORDER}` : "none",
+                    borderRight: (i + 1) % 7 ? `1px solid ${C.border}` : "none",
+                    borderTop: i >= 7 ? `1px solid ${C.border}` : "none",
                     padding: "0.3rem",
-                    background: !d ? "#fafbfd" : d === selectedDay ? "#eaf1fb" : WHITE,
+                    background: !d ? "#fafbfd" : d === selectedDay ? C.navyTint : C.white,
                     cursor: d ? "pointer" : "default",
                     minWidth: 0,
                   }}
@@ -219,12 +216,12 @@ export default function TimeOffCalendar() {
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
                         <span style={{
-                          fontSize: "0.8rem", fontWeight: isToday ? 800 : 600, color: isToday ? WHITE : TEXT,
-                          background: isToday ? NAVY : "transparent", borderRadius: 99, minWidth: 22, height: 22,
+                          fontSize: "0.8rem", fontWeight: isToday ? 800 : 600, color: isToday ? C.white : C.text,
+                          background: isToday ? C.navy : "transparent", borderRadius: 99, minWidth: 22, height: 22,
                           display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 5px",
                         }}>{+d.slice(8)}</span>
                         {list.length > 0 && (
-                          <span title={`${list.length} off`} style={{ fontSize: "0.68rem", fontWeight: 700, color: busy ? "#a61b1b" : MUTED, background: busy ? "#fdecec" : "transparent", borderRadius: 99, padding: "0 5px" }}>{list.length}</span>
+                          <span title={`${list.length} off`} style={{ fontSize: "0.68rem", fontWeight: 700, color: busy ? "#a61b1b" : C.muted, background: busy ? "#fdecec" : "transparent", borderRadius: 99, padding: "0 5px" }}>{list.length}</span>
                         )}
                       </div>
                       {list.slice(0, 3).map((r) => {
@@ -238,11 +235,11 @@ export default function TimeOffCalendar() {
                             title={`${r.officer_name} · ${st.label}`}
                             style={{ width: "100%", textAlign: "left", background: st.bg, color: st.fg, border: `1px solid ${st.border}`, borderRadius: 6, padding: "1px 5px", marginBottom: 2, fontSize: "0.72rem", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", cursor: "pointer", fontFamily: "inherit", minHeight: 0 }}
                           >
-                            {r.needsCheck ? "⚠ " : ""}{r.officer_name}
+                            {r.needsCheck && <Icon name="alert" size={12} style={{ marginRight: 3 }} />}{r.officer_name}
                           </button>
                         );
                       })}
-                      {list.length > 3 && <div className="cal-more" style={{ fontSize: "0.7rem", color: NAVY, fontWeight: 700 }}>+{list.length - 3} more</div>}
+                      {list.length > 3 && <div className="cal-more" style={{ fontSize: "0.7rem", color: C.navy, fontWeight: 700 }}>+{list.length - 3} more</div>}
                       <div className="cal-dots" style={{ flexWrap: "wrap", gap: 3, marginTop: 2 }}>
                         {list.slice(0, 6).map((r) => <span key={r.id} style={{ width: 7, height: 7, borderRadius: 99, background: statusOf(r.status).dot }} />)}
                       </div>
@@ -254,13 +251,13 @@ export default function TimeOffCalendar() {
           </div>
 
           {selectedDay && (
-            <div style={{ marginTop: "1rem", border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.9rem 1rem" }}>
+            <div style={{ marginTop: "1rem", border: `1px solid ${C.border}`, borderRadius: 12, padding: "0.9rem 1rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <div style={{ fontWeight: 700, color: TEXT }}>{nice(selectedDay)}</div>
+                <div style={{ fontWeight: 700, color: C.text }}>{nice(selectedDay)}</div>
                 <button type="button" onClick={() => setSelectedDay(null)} style={linkBtn}>Close</button>
               </div>
               {dayList.length === 0 ? (
-                <div style={{ color: MUTED, fontSize: "0.9rem" }}>Nobody has requested this day off.</div>
+                <div style={{ color: C.muted, fontSize: "0.9rem" }}>Nobody has requested this day off.</div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {dayList.map((r) => <PersonRow key={r.id} r={r} onOpen={() => setOpenReq(r)} />)}
@@ -270,14 +267,14 @@ export default function TimeOffCalendar() {
           )}
 
           <div style={{ marginTop: "1.5rem" }}>
-            <div style={{ fontSize: "1.05rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Next 30 days</div>
+            <div style={{ fontSize: "1.05rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>Next 30 days</div>
             {upcoming.length === 0 ? (
-              <div style={{ color: MUTED, fontSize: "0.9rem" }}>No time off requested in the next 30 days.</div>
+              <div style={{ color: C.muted, fontSize: "0.9rem" }}>No time off requested in the next 30 days.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                 {upcoming.map(([d, list]) => (
                   <div key={d}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: d === now ? NAVY : MUTED, marginBottom: 4 }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, color: d === now ? C.navy : C.muted, marginBottom: 4 }}>
                       {d === now ? "Today · " : ""}{nice(d)} <span style={{ fontWeight: 500 }}>· {list.length} off</span>
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -316,13 +313,13 @@ export default function TimeOffCalendar() {
 function PersonRow({ r, onOpen }: { r: Req; onOpen: () => void }) {
   const st = statusOf(r.status);
   return (
-    <button type="button" onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: WHITE, border: `1px solid ${BORDER}`, borderLeft: `4px solid ${st.dot}`, borderRadius: 10, padding: "0.55rem 0.8rem", cursor: "pointer", fontFamily: "inherit", minHeight: 0 }}>
+    <button type="button" onClick={onOpen} style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", textAlign: "left", background: C.white, border: `1px solid ${C.border}`, borderLeft: `4px solid ${st.dot}`, borderRadius: 10, padding: "0.55rem 0.8rem", cursor: "pointer", fontFamily: "inherit", minHeight: 0 }}>
       <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: "block", fontWeight: 700, color: TEXT, fontSize: "0.95rem" }}>{r.needsCheck ? "⚠ " : ""}{r.officer_name}</span>
-        {r.absence_type && <span style={{ display: "block", fontSize: "0.8rem", color: MUTED }}>{r.absence_type}</span>}
+        <span style={{ display: "block", fontWeight: 700, color: C.text, fontSize: "0.95rem" }}>{r.needsCheck && <Icon name="alert" size={14} color={C.orange} style={{ marginRight: 4 }} />}{r.officer_name}</span>
+        {r.absence_type && <span style={{ display: "block", fontSize: "0.8rem", color: C.muted }}>{r.absence_type}</span>}
       </span>
       {r.status !== "pending" && <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}` }}>{st.label}</span>}
-      {!r.printed_at && <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: "1px solid #bcd0ec" }}>New</span>}
+      {!r.printed_at && <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: C.navyTint, color: C.navy, border: "1px solid #bcd0ec" }}>New</span>}
     </button>
   );
 }
@@ -338,22 +335,23 @@ function RequestDetails({ r, onFix, onPrinted }: { r: Req; onFix: () => void; on
       const now = new Date().toISOString();
       getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
       onPrinted(r.id, now);
+      toast("Marked as printed");
     }
   };
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1, fontSize: "1.2rem", fontWeight: 700, color: TEXT }}>{r.officer_name}</div>
+        <div style={{ flex: 1, fontSize: "1.2rem", fontWeight: 700, color: C.text }}>{r.officer_name}</div>
         {r.status !== "pending" && <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}` }}>{st.label}</span>}
       </div>
       <Detail label="Type">{r.absence_type || "—"}</Detail>
       {r.reason && <Detail label="Reason">{r.reason}</Detail>}
       <Detail label="What they wrote">“{r.dates_requested.trim()}”</Detail>
       <Detail label={r.needsCheck ? "Dates on the calendar (please check)" : "Dates on the calendar"}>
-        {r.dates.length ? <DateGroups dates={r.dates} /> : <span style={{ color: "#9a3412" }}>None yet: tap Fix dates</span>}
+        {r.dates.length ? <DateGroups dates={r.dates} /> : <span style={{ color: C.orange }}>None yet: tap Fix dates</span>}
       </Detail>
-      <Detail label="Printed">{r.printed_at ? new Date(r.printed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : <span style={{ color: NAVY, fontWeight: 700 }}>Not yet (new)</span>}</Detail>
-      <Detail label="Submitted">{new Date(r.submitted_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</Detail>
+      <Detail label="Printed">{r.printed_at ? fmtDate(r.printed_at) : <span style={{ color: C.navy, fontWeight: 700 }}>Not yet (new)</span>}</Detail>
+      <Detail label="Submitted">{fmtStamp(r.submitted_at)}</Detail>
       <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
         <button type="button" onClick={print} style={{ ...primaryBtn, flex: "1 1 100%" }}>{r.printed_at ? "Print again" : "Print"}</button>
         <a href={href} style={{ ...secondaryBtn, flex: 1, textAlign: "center", textDecoration: "none" }}>Open request</a>
@@ -387,29 +385,29 @@ function FixDates({ r, onCancel, onSave }: { r: Req; onCancel: () => void; onSav
 
   return (
     <div>
-      <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>Dates for {r.officer_name}</div>
-      <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 10, padding: "0.6rem 0.8rem", margin: "0.6rem 0 0.9rem", fontSize: "0.9rem", color: TEXT }}>
-        <span style={{ color: MUTED }}>They wrote: </span>“{r.dates_requested.trim()}”
+      <div style={{ fontSize: "1.15rem", fontWeight: 700, color: C.text }}>Dates for {r.officer_name}</div>
+      <div style={{ background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 10, padding: "0.6rem 0.8rem", margin: "0.6rem 0 0.9rem", fontSize: "0.9rem", color: C.text }}>
+        <span style={{ color: C.muted }}>They wrote: </span>“{r.dates_requested.trim()}”
       </div>
-      <div style={{ fontSize: "0.88rem", color: MUTED, marginBottom: 8 }}>Tap days to add or remove them.</div>
+      <div style={{ fontSize: "0.88rem", color: C.muted, marginBottom: 8 }}>Tap days to add or remove them.</div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <button type="button" onClick={() => move(-1)} style={navBtn} aria-label="Previous month">‹</button>
-        <div style={{ fontWeight: 700, color: TEXT }}>{new Date(cur.y, cur.m, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
+        <div style={{ fontWeight: 700, color: C.text }}>{new Date(cur.y, cur.m, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</div>
         <button type="button" onClick={() => move(1)} style={navBtn} aria-label="Next month">›</button>
       </div>
       <div className="cal-grid" style={{ gap: 4 }}>
-        {WEEKDAYS.map((w) => <div key={w} style={{ textAlign: "center", fontSize: "0.7rem", color: MUTED, fontWeight: 700 }}>{w[0]}</div>)}
+        {WEEKDAYS.map((w) => <div key={w} style={{ textAlign: "center", fontSize: "0.7rem", color: C.muted, fontWeight: 700 }}>{w[0]}</div>)}
         {cells.map((d, i) => d ? (
           <button key={i} type="button" onClick={() => toggle(d)} aria-pressed={picked.has(d)} style={{
-            height: 40, borderRadius: 10, border: `1.5px solid ${picked.has(d) ? NAVY : BORDER}`, background: picked.has(d) ? NAVY : WHITE,
-            color: picked.has(d) ? WHITE : TEXT, fontWeight: 700, fontFamily: "inherit", fontSize: "0.9rem", cursor: "pointer", minHeight: 0, padding: 0,
+            height: 40, borderRadius: 10, border: `1.5px solid ${picked.has(d) ? C.navy : C.border}`, background: picked.has(d) ? C.navy : C.white,
+            color: picked.has(d) ? C.white : C.text, fontWeight: 700, fontFamily: "inherit", fontSize: "0.9rem", cursor: "pointer", minHeight: 0, padding: 0,
           }}>{+d.slice(8)}</button>
         ) : <div key={i} />)}
       </div>
-      <div style={{ marginTop: 10, fontSize: "0.88rem", color: TEXT }}>
-        {picked.size === 0 ? <span style={{ color: MUTED }}>No days picked.</span> : <><strong>{picked.size} day{picked.size === 1 ? "" : "s"}:</strong> <DateGroups dates={Array.from(picked)} /></>}
+      <div style={{ marginTop: 10, fontSize: "0.88rem", color: C.text }}>
+        {picked.size === 0 ? <span style={{ color: C.muted }}>No days picked.</span> : <><strong>{picked.size} day{picked.size === 1 ? "" : "s"}:</strong> <DateGroups dates={Array.from(picked)} /></>}
       </div>
-      {err && <div style={{ color: "#b91c1c", fontSize: "0.88rem", marginTop: 8 }}>{err}</div>}
+      {err && <div style={{ color: C.red, fontSize: "0.88rem", marginTop: 8 }}>{err}</div>}
       <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
         <button type="button" onClick={onCancel} style={{ ...secondaryBtn, flex: 1 }}>Cancel</button>
         <button type="button" disabled={saving} onClick={async () => { setSaving(true); setErr(await onSave(Array.from(picked).sort())); setSaving(false); }} style={{ ...primaryBtn, flex: 2, opacity: saving ? 0.7 : 1 }}>
@@ -423,8 +421,8 @@ function FixDates({ r, onCancel, onSave }: { r: Req; onCancel: () => void; onSav
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: "0.75rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: "0.95rem", color: TEXT, lineHeight: 1.5 }}>{children}</div>
+      <div style={{ fontSize: "0.75rem", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: "0.95rem", color: C.text, lineHeight: 1.5 }}>{children}</div>
     </div>
   );
 }
@@ -437,8 +435,8 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   }, [onClose]);
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.45)", zIndex: 900, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ background: WHITE, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", padding: "1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))", boxShadow: "0 -10px 40px rgba(15,23,42,0.2)", marginBottom: 0 }}>
-        <div style={{ width: 40, height: 4, borderRadius: 99, background: BORDER, margin: "0 auto 12px" }} />
+      <div onClick={(e) => e.stopPropagation()} role="dialog" style={{ background: C.white, width: "100%", maxWidth: 480, maxHeight: "90vh", overflowY: "auto", borderRadius: "18px 18px 0 0", padding: "1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom))", boxShadow: "0 -10px 40px rgba(15,23,42,0.2)", marginBottom: 0 }}>
+        <div style={{ width: 40, height: 4, borderRadius: 99, background: C.border, margin: "0 auto 12px" }} />
         {children}
       </div>
     </div>
@@ -446,7 +444,7 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
 }
 
 const headerLink: React.CSSProperties = { color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 };
-const navBtn: React.CSSProperties = { width: 38, height: 38, borderRadius: 10, border: `1px solid ${BORDER}`, background: WHITE, color: TEXT, fontSize: "1.2rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 0, padding: 0 };
-const linkBtn: React.CSSProperties = { background: "none", border: "none", color: NAVY, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.88rem", padding: 0, minHeight: 0 };
-const primaryBtn: React.CSSProperties = { background: NAVY, color: WHITE, border: "none", borderRadius: 12, padding: "0.8rem 1rem", fontWeight: 700, fontSize: "0.95rem", fontFamily: "inherit", cursor: "pointer" };
-const secondaryBtn: React.CSSProperties = { background: WHITE, color: NAVY, border: `1.5px solid ${NAVY}`, borderRadius: 12, padding: "0.8rem 1rem", fontWeight: 700, fontSize: "0.95rem", fontFamily: "inherit", cursor: "pointer" };
+const navBtn: React.CSSProperties = { width: 38, height: 38, borderRadius: 10, border: `1px solid ${C.border}`, background: C.white, color: C.text, fontSize: "1.2rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", minHeight: 0, padding: 0 };
+const linkBtn: React.CSSProperties = { background: "none", border: "none", color: C.navy, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", fontSize: "0.88rem", padding: 0, minHeight: 0 };
+const primaryBtn: React.CSSProperties = { background: C.navy, color: C.white, border: "none", borderRadius: 12, padding: "0.8rem 1rem", fontWeight: 700, fontSize: "0.95rem", fontFamily: "inherit", cursor: "pointer" };
+const secondaryBtn: React.CSSProperties = { background: C.white, color: C.navy, border: `1.5px solid ${C.navy}`, borderRadius: 12, padding: "0.8rem 1rem", fontWeight: 700, fontSize: "0.95rem", fontFamily: "inherit", cursor: "pointer" };

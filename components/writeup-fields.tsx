@@ -167,7 +167,7 @@ export default function WriteUpFields({ form, setForm, workHistory, setWorkHisto
           </div>
         )}
         {(form.actionTermination || form.actionSuspension) && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "3px solid #b91c1c", borderRadius: 10, padding: "0.65rem 0.9rem", fontSize: "0.88rem", color: "#b91c1c", fontWeight: 600, marginBottom: "1rem", lineHeight: 1.45 }}>
+          <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderLeft: "3px solid #b91c1c", borderRadius: 10, padding: "0.65rem 0.9rem", fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "1rem", lineHeight: 1.45 }}>
             * Unpaid disciplinary suspensions of greater than one day require review with Regional HR Manager or Director in advance.
           </div>
         )}
