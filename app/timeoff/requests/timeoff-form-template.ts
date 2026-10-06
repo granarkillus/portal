@@ -30,6 +30,9 @@ export interface TimeOffRequest {
   manager_signature: string | null;
   manager_date: string | null;
   submitted_at: string;
+  // Not printed on the form; used by the supervisor pages.
+  printed_at?: string | null;
+  requested_dates?: string[] | null;
 }
 
 export interface TimeOffFormOptions {

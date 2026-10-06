@@ -47,6 +47,12 @@ export default function TimeOffViewPage() {
   // decision, if any).
   const generatePDF = () => {
     if (!request) return;
+    // Printing is what sends a request on to Shawn, so remember it.
+    if (!request.printed_at) {
+      const now = new Date().toISOString();
+      getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", request.id).then(() => {});
+      setRequest((r) => (r ? { ...r, printed_at: now } : r));
+    }
     const html = buildTimeOffFormDocument(request);
     const win = window.open("", "_blank");
     if (win) {

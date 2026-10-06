@@ -59,10 +59,10 @@ export default function Dashboard() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     Promise.all([
-      supabase.from("time_off_requests").select("id, officer_name, absence_type, dates_requested, status, submitted_at").eq("status", "pending").order("submitted_at", { ascending: false }).limit(5),
+      supabase.from("time_off_requests").select("id, officer_name, absence_type, dates_requested, status, submitted_at").order("submitted_at", { ascending: false }).limit(5),
       supabase.from("calloff_submissions").select("id, officer_name, post, shift_date, notice_type, submitted_at, excusal_status").order("submitted_at", { ascending: false }).limit(5),
       supabase.from("disciplinary_records").select("id, officer_name, infraction, action_type, signature, submitted_at").is("signature", null).order("submitted_at", { ascending: false }).limit(5),
-      supabase.from("time_off_requests").select("id", { count: "exact" }).eq("status", "pending"),
+      supabase.from("time_off_requests").select("id", { count: "exact" }).is("printed_at", null),
       supabase.from("calloff_submissions").select("id", { count: "exact" }).gte("submitted_at", sevenDaysAgo),
       supabase.from("disciplinary_records").select("id", { count: "exact" }).is("signature", null),
       supabase.from("dar_submissions").select("id", { count: "exact" }),
@@ -129,9 +129,8 @@ export default function Dashboard() {
                 <div style={{ color: MUTED, fontSize: "0.88rem" }}>Nobody has time off today.</div>
               ) : offToday.map((r) => (
                 <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: TEXT, padding: "2px 0" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: r.status === "approved" ? "#16a34a" : "#e0a300", flexShrink: 0 }} />
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: NAVY, flexShrink: 0 }} />
                   {r.officer_name}
-                  <span style={{ color: MUTED, fontSize: "0.8rem" }}>{r.status === "approved" ? "approved" : "pending"}</span>
                 </div>
               ))}
             </a>
@@ -151,7 +150,7 @@ export default function Dashboard() {
         {/* Pending counts */}
         <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
           {[
-            { label: "Time-off to approve", value: stats.pendingTimeOff, color: NAVY, link: "/timeoff/requests" },
+            { label: "New time-off requests (not printed yet)", value: stats.pendingTimeOff, color: NAVY, link: "/timeoff/requests?filter=new" },
             { label: "Call-offs to review", value: stats.pendingCallOffReview, color: "#92400e", link: "/supervisor/calloffs" },
             { label: "Write-ups awaiting signature", value: stats.pendingDisciplinary, color: "#b91c1c", link: "/writeup/records" },
           ].map((stat) => (
