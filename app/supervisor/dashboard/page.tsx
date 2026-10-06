@@ -5,13 +5,12 @@ import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
-const DARK = "#243b5e";
 const SOFT_BG = "#f2f5fa";
 const WHITE = "#ffffff";
 const MUTED = "#5b6474";
 const BORDER = "#dbe2ec";
 const TEXT = "#0f172a";
-const GREEN = "#15803d";
+const pill: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", fontSize: "0.85rem", fontWeight: 700, color: "#0f172a", background: "#ffffff", border: "1px solid #dbe2ec", borderRadius: 999, padding: "0.4rem 0.9rem" };
 
 interface Stats {
   pendingTimeOff: number;
@@ -28,7 +27,7 @@ interface RecentItem {
   type: string;
   name: string;
   detail: string;
-  time: string;
+  at: string;
   status?: string;
 }
 
@@ -43,7 +42,7 @@ export default function Dashboard() {
 
   const formatTime = (iso: string) => {
     if (!iso) return "";
-    return new Date(iso).toLocaleString("en-US", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
+    return new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", hour12: true });
   };
 
   useEffect(() => {
@@ -59,9 +58,9 @@ export default function Dashboard() {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 
     Promise.all([
-      supabase.from("time_off_requests").select("id, officer_name, absence_type, dates_requested, status, submitted_at").order("submitted_at", { ascending: false }).limit(5),
-      supabase.from("calloff_submissions").select("id, officer_name, post, shift_date, notice_type, submitted_at, excusal_status").order("submitted_at", { ascending: false }).limit(5),
-      supabase.from("disciplinary_records").select("id, officer_name, infraction, action_type, signature, submitted_at").is("signature", null).order("submitted_at", { ascending: false }).limit(5),
+      supabase.from("time_off_requests").select("id, officer_name, absence_type, dates_requested, status, submitted_at").gte("submitted_at", sevenDaysAgo).order("submitted_at", { ascending: false }).limit(15),
+      supabase.from("calloff_submissions").select("id, officer_name, post, shift_date, notice_type, submitted_at, excusal_status").gte("submitted_at", sevenDaysAgo).order("submitted_at", { ascending: false }).limit(15),
+      supabase.from("disciplinary_records").select("id, officer_name, infraction, action_type, signature, submitted_at").gte("submitted_at", sevenDaysAgo).order("submitted_at", { ascending: false }).limit(15),
       supabase.from("time_off_requests").select("id", { count: "exact" }).is("printed_at", null),
       supabase.from("calloff_submissions").select("id", { count: "exact" }).gte("submitted_at", sevenDaysAgo),
       supabase.from("disciplinary_records").select("id", { count: "exact" }).is("signature", null),
@@ -87,10 +86,10 @@ export default function Dashboard() {
       });
 
       const items: RecentItem[] = [
-        ...(timeOff.data || []).map((r) => ({ id: r.id, type: "time-off", name: r.officer_name, detail: `${r.absence_type} — ${r.dates_requested}`, time: formatTime(r.submitted_at), status: r.status })),
-        ...(callOffs.data || []).map((r) => ({ id: r.id, type: "calloff", name: r.officer_name, detail: `${r.post} — ${r.notice_type}`, time: formatTime(r.submitted_at) })),
-        ...(disciplinary.data || []).map((r) => ({ id: r.id, type: "disciplinary", name: r.officer_name, detail: r.infraction || r.action_type || "Disciplinary notice", time: formatTime(r.submitted_at), status: r.signature ? "acknowledged" : "pending" })),
-      ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 10);
+        ...(timeOff.data || []).map((r) => ({ id: r.id, type: "time-off", name: r.officer_name, detail: [r.absence_type, r.dates_requested].filter(Boolean).join(" · "), at: r.submitted_at, status: r.status })),
+        ...(callOffs.data || []).map((r) => ({ id: r.id, type: "calloff", name: r.officer_name, detail: [r.post, r.shift_date && new Date(`${r.shift_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" })].filter(Boolean).join(" · "), at: r.submitted_at })),
+        ...(disciplinary.data || []).map((r) => ({ id: r.id, type: "disciplinary", name: r.officer_name, detail: r.infraction || r.action_type || "Write-up", at: r.submitted_at, status: r.signature ? "acknowledged" : "pending" })),
+      ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 12);
 
       setRecent(items);
       setLoading(false);
@@ -104,9 +103,9 @@ export default function Dashboard() {
   };
 
   const typeConfig: Record<string, { label: string; color: string; bg: string; link: (id: string) => string }> = {
-    "time-off": { label: "Time off", color: NAVY, bg: "#eaf1fb", link: () => `/timeoff/requests` },
-    "calloff": { label: "Call-off", color: "#92400e", bg: "#fff3cd", link: () => `/supervisor/calloffs` },
-    "disciplinary": { label: "Write-up", color: "#b91c1c", bg: "#fef2f2", link: () => `/writeup/records` },
+    "time-off": { label: "Time off", color: NAVY, bg: "#eaf1fb", link: (id) => `/timeoff/view?id=${id}` },
+    "calloff": { label: "Call-off", color: "#92400e", bg: "#fff3cd", link: () => `/supervisor/calloffs?filter=week` },
+    "disciplinary": { label: "Write-up", color: "#b91c1c", bg: "#fef2f2", link: (id) => `/writeup/view?id=${id}` },
   };
 
   return (
@@ -114,7 +113,7 @@ export default function Dashboard() {
 
       <SupervisorHeader title="Dashboard" active="dashboard" right={<button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 999, padding: "0.3rem 0.75rem", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 0, whiteSpace: "nowrap", flexShrink: 0 }}>Sign out</button>} rounded={false} />
 
-      <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 1040, margin: "0 auto", padding: "1rem 0.75rem 2rem" }}>
 
         {/* Today at a glance */}
         <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1rem 1.1rem", marginBottom: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
@@ -162,93 +161,44 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Totals */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1.25rem" }}>
-          {[
-            ["DARs (all time)", stats.darsTotal, "/dar/report"],
-            ["Call-offs (7 days)", stats.recentCallOffs, "/supervisor/calloffs"],
-            ["Call-offs (all time)", stats.callOffsTotal, "/supervisor/calloffs"],
-            ["Unexcused (all time)", stats.unexcusedCallOffs, "/supervisor/calloffs"],
-          ].map(([label, value, href]) => (
-            <a key={label as string} href={href as string} style={{ textDecoration: "none", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 999, padding: "0.35rem 0.85rem", display: "flex", alignItems: "baseline", gap: 6 }}>
-              <span style={{ fontWeight: 800, color: TEXT }}>{loading ? "—" : value}</span>
-              <span style={{ fontSize: "0.82rem", color: MUTED, fontWeight: 600 }}>{label}</span>
-            </a>
+        {/* Shortcuts */}
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
+          <a href="/writeup/write" style={{ ...pill, background: "#b91c1c", borderColor: "#b91c1c", color: WHITE }}>+ New write-up</a>
+          <a href="/dar/report" style={pill}>DARs <span style={{ color: MUTED, fontWeight: 600 }}>{loading ? "" : stats.darsTotal}</span></a>
+          <a href="/supervisor/calloffs?filter=unexcused" style={pill}>Unexcused call-offs <span style={{ color: MUTED, fontWeight: 600 }}>{loading ? "" : stats.unexcusedCallOffs}</span></a>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.35rem 0.85rem", margin: "-0.5rem 0 1.25rem", padding: "0 0.25rem" }}>
+          <span style={{ fontSize: "0.8rem", color: MUTED, fontWeight: 600 }}>Officer forms:</span>
+          {[["Time off", "/timeoff"], ["DAR", "/dar"], ["Call-off", "/calloff"], ["Write-up response", "/writeup"]].map(([label, href]) => (
+            <a key={href} href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.82rem", fontWeight: 600, color: NAVY, textDecoration: "none" }}>{label} ↗</a>
           ))}
         </div>
 
-        <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ padding: "0.85rem 1.1rem 0.5rem", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Recent activity</div>
-            {loading ? (
-              <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
-            ) : recent.length === 0 ? (
-              <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.82rem" }}>No recent activity.</div>
-            ) : (
-              recent.map((item, i) => {
-                const config = typeConfig[item.type];
-                return (
-                  <a key={i} href={config.link(item.id)} style={{ display: "block", padding: "0.75rem 1.5rem", borderBottom: i < recent.length - 1 ? `1px solid ${BORDER}` : "none", textDecoration: "none", background: WHITE }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: 2 }}>
-                          <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "1px 7px", borderRadius: 999, background: config.bg, color: config.color, textTransform: "capitalize", letterSpacing: "0.04em" }}>{config.label}</span>
-                          <span style={{ fontWeight: 700, fontSize: "0.85rem", color: TEXT }}>{item.name}</span>
-                        </div>
-                        <div style={{ fontSize: "0.76rem", color: MUTED }}>{item.detail}</div>
-                      </div>
-                      <div style={{ fontSize: "0.7rem", color: MUTED, whiteSpace: "nowrap", marginTop: 2 }}>{item.time}</div>
-                    </div>
-                  </a>
-                );
-              })
-            )}
+        {/* This week */}
+        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", padding: "0.9rem 1.1rem 0.6rem" }}>
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>This week</div>
+            <div style={{ fontSize: "0.82rem", color: MUTED }}>{loading ? "" : `${stats.recentCallOffs} call-off${stats.recentCallOffs === 1 ? "" : "s"} in the last 7 days`}</div>
           </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ padding: "0.85rem 1.1rem 0", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Quick actions</div>
-              <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[
-                  { label: "File a write-up", href: "/writeup/write", color: "#b91c1c" },
-                  { label: "Time-off calendar", href: "/supervisor/calendar", color: NAVY },
-                  { label: "Review time-off requests", href: "/timeoff/requests", color: NAVY },
-                  { label: "View write-ups", href: "/writeup/records", color: NAVY },
-                  { label: "DAR reports", href: "/dar/report", color: GREEN },
-                  { label: "Call-off history", href: "/supervisor/calloffs", color: "#92400e" },
-                ].map((link) => (
-                  <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0.85rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.85rem", fontWeight: 600, color: link.color }}>
-                    {link.label}
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-              <div style={{ padding: "0.85rem 1.1rem 0", fontSize: "1.05rem", fontWeight: 700, color: TEXT }}>Officer forms</div>
-              <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[
-                  { label: "Time-off request", href: "/timeoff" },
-                  { label: "Daily Activity Report", href: "/dar" },
-                  { label: "Call-off", href: "/calloff" },
-                  { label: "Write-up response", href: "/writeup" },
-                ].map((link) => (
-                  <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0.6rem 0.85rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.85rem", fontWeight: 600, color: MUTED }}>
-                    {link.label}
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                      <polyline points="15 3 21 3 21 9"/>
-                      <line x1="10" y1="14" x2="21" y2="3"/>
-                    </svg>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
+          {loading ? (
+            <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.9rem" }}>Loading…</div>
+          ) : recent.length === 0 ? (
+            <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.9rem" }}>Nothing new in the last 7 days.</div>
+          ) : (
+            recent.map((item) => {
+              const config = typeConfig[item.type];
+              return (
+                <a key={`${item.type}-${item.id}`} href={config.link(item.id)} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1.1rem", borderTop: `1px solid ${BORDER}`, textDecoration: "none", background: WHITE }}>
+                  <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: config.bg, color: config.color, whiteSpace: "nowrap", minWidth: 62, textAlign: "center" }}>{config.label}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{item.name}</div>
+                    {item.detail && <div style={{ fontSize: "0.82rem", color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>}
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: MUTED, whiteSpace: "nowrap" }}>{formatTime(item.at)}</div>
+                </a>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

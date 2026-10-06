@@ -177,7 +177,7 @@ export default function ApprovePage() {
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
-        <SupervisorHeader title="Time-off request" active="timeoff" actions={<a href="/timeoff/requests" style={headerButton()}>← All requests</a>} />
+        <SupervisorHeader title="Time-off request" active="timeoff" actions={<><a href="/timeoff/requests" style={headerButton()}>← All requests</a><button type="button" onClick={generatePDF} style={headerButton(true)}>Print</button></>} />
 
         {request && (
           <div style={{ padding: "0 0 2rem" }}>
@@ -194,7 +194,7 @@ export default function ApprovePage() {
                 ["Submitted", formatDate(request.submitted_at)],
               ].map(([label, val]) => val ? (
                 <div key={label} style={{ fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "0.05em", color: MUTED }}>{label}: </span>
+                  <span style={{ fontWeight: 600, fontSize: "0.82rem", color: MUTED }}>{label}: </span>
                   <span style={{ color: TEXT, fontWeight: label === "Type" || label === "Dates" ? 600 : 400 }}>{val}</span>
                 </div>
               ) : null)}
@@ -211,7 +211,7 @@ export default function ApprovePage() {
               </div>
             </div>
 
-            <SectionBar label="Time Off Information — Employee" />
+            <SectionBar label="Request details" />
             <div style={{ padding: "1rem 1.25rem", background: "#fafafa" }}>
               {request.reason && (
                 <div style={{ marginBottom: "0.5rem" }}>
@@ -231,7 +231,7 @@ export default function ApprovePage() {
               </div>
             </div>
 
-            <SectionBar label="Manager / Scheduling Supervisor Approval" />
+            <SectionBar label="Record a decision (optional)" />
             <div style={{ padding: "1.25rem 2rem 0" }}>
 
               <div style={{ marginBottom: "1.25rem", maxWidth: 260 }}>
@@ -367,7 +367,7 @@ export default function ApprovePage() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.75rem 1.25rem 0", paddingBottom: "0.5rem", borderBottom: `2px solid ${NAVY}`, color: NAVY, fontSize: "1.05rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.5rem 1.25rem 0", color: "#0f172a", fontSize: "1.1rem", fontWeight: 700 }}>
       {label}
     </div>
   );

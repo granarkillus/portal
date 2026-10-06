@@ -105,7 +105,7 @@ export default function DARReport() {
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         <SupervisorHeader title="DAR reports" active="dars" />
 

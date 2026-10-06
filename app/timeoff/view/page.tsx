@@ -103,7 +103,7 @@ export default function TimeOffViewPage() {
                 ["Submitted", formatDate(request.submitted_at)],
               ].map(([label, val]) => val ? (
                 <div key={label} style={{ fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "0.05em", color: MUTED }}>{label}: </span>
+                  <span style={{ fontWeight: 600, fontSize: "0.82rem", color: MUTED }}>{label}: </span>
                   <span style={{ color: TEXT, fontWeight: label === "Type" || label === "Dates" ? 600 : 400 }}>{val}</span>
                 </div>
               ) : null)}
@@ -115,7 +115,7 @@ export default function TimeOffViewPage() {
             </div>
 
             {/* Employee section */}
-            <SectionBar label="Time Off Information — Employee" />
+            <SectionBar label="Request details" />
             <div style={{ padding: "1rem 1.25rem", background: "#fafafa" }}>
               {request.reason && (
                 <div style={{ marginBottom: "0.75rem" }}>
@@ -130,19 +130,19 @@ export default function TimeOffViewPage() {
             </div>
 
             {/* Manager section */}
-            <SectionBar label="Manager / Scheduling Supervisor Approval" />
+            <SectionBar label="Manager decision" />
             <div style={{ padding: "1rem 1.25rem" }}>
               {request.manager_signature ? (
                 <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem 1.25rem" }}>
                   <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                     {request.hours_available && (
                       <div>
-                        <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>Hours Available</div>
+                        <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 2 }}>Hours Available</div>
                         <div style={{ fontSize: "0.88rem", color: TEXT, fontWeight: 600 }}>{request.hours_available}</div>
                       </div>
                     )}
                     <div>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>Decision</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 2 }}>Decision</div>
                       <div style={{ fontSize: "0.92rem", fontWeight: 700, color: request.status === "approved" ? GREEN : "#b91c1c" }}>
                         {request.approval_decision === "approved_payout" ? "✓ Approved — With Payout"
                           : request.approval_decision === "approved_no_payout" ? "✓ Approved — Without Payout"
@@ -153,7 +153,7 @@ export default function TimeOffViewPage() {
                   </div>
                   {request.rejection_reason && (
                     <div style={{ marginBottom: "0.75rem" }}>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>Rejection Reason</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 2 }}>Rejection Reason</div>
                       <div style={{ fontSize: "0.85rem", color: TEXT }}>{request.rejection_reason}</div>
                     </div>
                   )}
@@ -185,7 +185,7 @@ export default function TimeOffViewPage() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.75rem 1.25rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.5rem 1.25rem 0", color: "#0f172a", fontSize: "1.1rem", fontWeight: 700 }}>
       {label}
     </div>
   );

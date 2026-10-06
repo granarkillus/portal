@@ -36,7 +36,8 @@ export default function CallOffRecordsPage() {
   const [records, setRecords] = useState<CallOff[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter")) || "all");
+  const [moreFilters, setMoreFilters] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -124,7 +125,8 @@ export default function CallOffRecordsPage() {
       (filter === "docs" && !!r.document_url) ||
       (filter === "pending" && (!r.excusal_status || r.excusal_status === "pending")) ||
       (filter === "excused" && r.excusal_status === "excused") ||
-      (filter === "unexcused" && r.excusal_status === "unexcused");
+      (filter === "unexcused" && r.excusal_status === "unexcused") ||
+      (filter === "week" && new Date(r.submitted_at).getTime() >= Date.now() - 7 * 86400000);
     return matchesSearch && matchesFilter;
   });
 
@@ -135,21 +137,24 @@ export default function CallOffRecordsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         <SupervisorHeader title="Call-offs" active="calloffs" />
 
-        <StatStrip items={[["Total", records.length], ["Pending review", pendingReview, "#8a5a00"], ["Unexcused", unexcused, "#a61b1b"], ["Under 4 hr notice", less4], ["With documents", withDocs]]} />
+        <StatStrip items={[["To review", pendingReview, "#8a5a00"], ["Unexcused", unexcused, "#a61b1b"], ["Under 4 hr notice", less4], ["Total", records.length]]} />
 
         <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer, post, or reason..."
             style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.85rem", color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit" }} />
           <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-            {[["all","All"],["pending","Pending"],["excused","Excused"],["unexcused","Unexcused"],["4plus","4+ hr"],["less4","< 4hr"],["docs","With Docs"]].map(([val, label]) => (
-              <button key={val} onClick={() => setFilter(val)} style={{ padding: "0.4rem 0.9rem", borderRadius: 12, fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${filter === val ? NAVY : BORDER}`, background: filter === val ? NAVY : WHITE, color: filter === val ? WHITE : MUTED, cursor: "pointer", fontFamily: "inherit" }}>
+            {([["all","All"],["pending","To review"],["week","This week"]] as string[][]).concat(moreFilters || ["excused","unexcused","4plus","less4","docs"].includes(filter) ? [["excused","Excused"],["unexcused","Unexcused"],["4plus","4+ hr notice"],["less4","Under 4 hr"],["docs","With documents"]] : []).map(([val, label]) => (
+              <button key={val} onClick={() => setFilter(val)} style={{ padding: "0.45rem 0.95rem", borderRadius: 999, fontSize: "0.85rem", fontWeight: 700, border: `1px solid ${filter === val ? NAVY : BORDER}`, background: filter === val ? NAVY : WHITE, color: filter === val ? WHITE : MUTED, cursor: "pointer", fontFamily: "inherit" }}>
                 {label}
               </button>
             ))}
+            {!moreFilters && !["excused","unexcused","4plus","less4","docs"].includes(filter) && (
+              <button type="button" onClick={() => setMoreFilters(true)} style={{ padding: "0.45rem 0.95rem", borderRadius: 999, fontSize: "0.85rem", fontWeight: 700, border: `1px dashed ${BORDER}`, background: WHITE, color: NAVY, cursor: "pointer", fontFamily: "inherit" }}>More filters</button>
+            )}
           </div>
         </div>
 
@@ -171,7 +176,7 @@ export default function CallOffRecordsPage() {
                       <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
                       {excusalBadge(excusalStatus)}
                       <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: isLess4 ? "#fef2f2" : "#e8f5e9", color: isLess4 ? "#b91c1c" : GREEN, border: `1px solid ${isLess4 ? "#fca5a5" : "#a5d6a7"}`, textTransform: "capitalize" as const, letterSpacing: "0.04em" }}>
-                        {isLess4 ? "< 4hr Notice" : "4+ hr Notice"}
+                        {isLess4 ? "Under 4 hr notice" : "4+ hr notice"}
                       </span>
                       {r.document_url && <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: `1px solid #c3d4e8`, textTransform: "capitalize" as const }}>Doc Attached</span>}
                     </div>
