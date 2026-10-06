@@ -121,6 +121,12 @@ export default function ApprovePage() {
 
   const generatePDF = () => {
     if (!request) return;
+    // Printing is what sends a request on to Shawn, so remember it.
+    if (!request.printed_at) {
+      const now = new Date().toISOString();
+      getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", request.id).then(() => {});
+      setRequest((r) => (r ? { ...r, printed_at: now } : r));
+    }
 
     const merged: TimeOffRequest = {
       ...request,
@@ -171,7 +177,7 @@ export default function ApprovePage() {
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
       <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
-        <SupervisorHeader title="Review time-off request" active="timeoff" actions={<a href="/timeoff/requests" style={headerButton()}>← All requests</a>} />
+        <SupervisorHeader title="Time-off request" active="timeoff" actions={<a href="/timeoff/requests" style={headerButton()}>← All requests</a>} />
 
         {request && (
           <div style={{ padding: "0 0 2rem" }}>

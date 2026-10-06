@@ -17,7 +17,7 @@ const GREEN = "#15803d";
 export default function RequestsPage() {
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter")) || "all");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -41,12 +41,14 @@ export default function RequestsPage() {
     return `${m}/${day}/${y}`;
   };
 
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  const isUpcoming = (r: TimeOffRequest) => (r.requested_dates || []).some((d) => d >= today);
   const filtered = requests.filter((r) => {
     const matchesFilter =
       filter === "all" ||
-      (filter === "pending" && r.status === "pending") ||
-      (filter === "approved" && r.status === "approved") ||
-      (filter === "rejected" && r.status === "rejected");
+      (filter === "new" && !r.printed_at) ||
+      (filter === "printed" && !!r.printed_at) ||
+      (filter === "upcoming" && isUpcoming(r));
     const matchesSearch =
       !search ||
       r.officer_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,9 +57,22 @@ export default function RequestsPage() {
     return matchesFilter && matchesSearch;
   });
 
-  const pending = requests.filter((r) => r.status === "pending").length;
-  const approved = requests.filter((r) => r.status === "approved").length;
-  const rejected = requests.filter((r) => r.status === "rejected").length;
+  const newCount = requests.filter((r) => !r.printed_at).length;
+  const upcomingCount = requests.filter(isUpcoming).length;
+  const offToday = requests.filter((r) => r.status !== "rejected" && (r.requested_dates || []).includes(today)).length;
+
+  // In practice requests are printed and texted to Shawn rather than
+  // approved here, so "printed" is what tells a new request from a handled one.
+  const markPrinted = (r: TimeOffRequest) => {
+    if (r.printed_at) return;
+    const now = new Date().toISOString();
+    setRequests((rs) => rs.map((x) => (x.id === r.id ? { ...x, printed_at: now } : x)));
+    getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
+  };
+
+  const printedBadge = (r: TimeOffRequest) => r.printed_at
+    ? <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: MUTED, border: `1px solid ${BORDER}` }}>Printed {formatDate(r.printed_at)}</span>
+    : <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: "1px solid #bcd0ec" }}>New</span>;
 
   const statusBadge = (status: string) => {
     const styles: Record<string, { bg: string; color: string; border: string }> = {
@@ -68,7 +83,7 @@ export default function RequestsPage() {
     const s = styles[status] || styles.pending;
     return (
       <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, textTransform: "capitalize", letterSpacing: "0.05em" }}>
-        {status}
+        {status === "rejected" ? "Denied" : status}
       </span>
     );
   };
@@ -97,15 +112,15 @@ export default function RequestsPage() {
 
         <SupervisorHeader title="Time-off requests" active="timeoff" />
 
-        <StatStrip items={[["Total", requests.length], ["Pending", pending, "#8a5a00"], ["Approved", approved, "#146c34"], ["Denied", rejected, "#a61b1b"]]} />
+        <StatStrip items={[["New (not printed)", newCount, NAVY], ["Off today", offToday], ["Upcoming", upcomingCount], ["Total", requests.length]]} action={<a href="/supervisor/calendar" style={{ display: "inline-block", background: NAVY, color: "#fff", textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem" }}>📅 Calendar</a>} />
 
         <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer, type, or dates..."
             style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${BORDER}`, borderRadius: 12, fontSize: "0.85rem", color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit" }} />
           <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["all", "pending", "approved", "rejected"].map((f) => (
+            {["all", "new", "upcoming", "printed"].map((f) => (
               <button key={f} onClick={() => setFilter(f)} style={{ padding: "0.4rem 0.9rem", borderRadius: 12, fontSize: "0.78rem", fontWeight: 700, border: `1px solid ${filter === f ? NAVY : BORDER}`, background: filter === f ? NAVY : WHITE, color: filter === f ? WHITE : MUTED, cursor: "pointer", fontFamily: "inherit", textTransform: "capitalize" }}>
-                {f === "rejected" ? "Denied" : f}
+                {f === "new" ? "New" : f === "upcoming" ? "Upcoming" : f === "printed" ? "Printed" : "All"}
               </button>
             ))}
           </div>
@@ -118,10 +133,11 @@ export default function RequestsPage() {
         ) : (
           filtered.map((r) => (
             <div key={r.id} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
-                  {statusBadge(r.status)}
+                  {printedBadge(r)}
+                  {r.status !== "pending" && statusBadge(r.status)}
                 </div>
                 <div style={{ fontSize: "0.78rem", color: MUTED }}>
                   <span style={{ fontWeight: 600, color: TEXT }}>{r.absence_type}</span>
@@ -133,18 +149,18 @@ export default function RequestsPage() {
               </div>
               <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
                 <button
-                  onClick={() => generateBlankManagerPDF(r)}
-                  style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 12, color: "#92400e", padding: "0.4rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
+                  onClick={() => { generateBlankManagerPDF(r); markPrinted(r); }}
+                  style={{ background: r.printed_at ? WHITE : NAVY, border: `1px solid ${r.printed_at ? BORDER : NAVY}`, borderRadius: 999, color: r.printed_at ? NAVY : WHITE, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                     <polyline points="14 2 14 8 20 8"/>
                   </svg>
-                  Print
+                  {r.printed_at ? "Print again" : "Print"}
                 </button>
                 {r.status !== "pending" && (
                   <button
-                    onClick={() => generatePDF(r)}
+                    onClick={() => { generatePDF(r); markPrinted(r); }}
                     style={{ background: "none", border: `1px solid ${BORDER}`, borderRadius: 12, color: MUTED, padding: "0.4rem 0.75rem", fontSize: "0.75rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", display: "flex", alignItems: "center", gap: 4 }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -157,8 +173,8 @@ export default function RequestsPage() {
                   </button>
                 )}
                 <a href={r.status === "pending" ? `/timeoff/approve?id=${r.id}` : `/timeoff/view?id=${r.id}`}
-                  style={{ ...btnStyle(r.status === "pending" ? NAVY : "#6b7280"), padding: "0.4rem 1rem", width: "auto", fontSize: "0.78rem", display: "inline-block", textDecoration: "none", textAlign: "center" as const }}>
-                  {r.status === "pending" ? "Review" : "View"}
+                  style={{ background: "none", border: `1px solid ${BORDER}`, color: MUTED, borderRadius: 999, padding: "0.5rem 1rem", fontSize: "0.88rem", fontWeight: 700, display: "inline-block", textDecoration: "none", textAlign: "center" as const }}>
+                  Open
                 </a>
               </div>
             </div>

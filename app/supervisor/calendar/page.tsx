@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { parseRequestedDates } from "@/lib/parse-dates";
+import { buildTimeOffFormDocument, TimeOffRequest } from "@/app/timeoff/requests/timeoff-form-template";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 
 const NAVY = "#1a4480";
@@ -22,14 +23,18 @@ interface Row {
   dates_need_review: boolean | null;
   status: string;
   submitted_at: string;
+  printed_at?: string | null;
 }
 
 interface Req extends Row { dates: string[]; needsCheck: boolean }
 
+// Requests are printed and handed on rather than approved here, so everyone
+// who asked for a day off shows the same way. Only a recorded denial looks
+// different (greyed out, hidden unless "Show denied" is on).
 const STATUS: Record<string, { label: string; bg: string; fg: string; border: string; dot: string }> = {
-  pending: { label: "Pending", bg: "#fff7e0", fg: "#8a5a00", border: "#f5c451", dot: "#e0a300" },
-  approved: { label: "Approved", bg: "#e6f6ec", fg: "#146c34", border: "#8fd4a8", dot: "#16a34a" },
-  rejected: { label: "Denied", bg: "#fdecec", fg: "#a61b1b", border: "#f4a5a5", dot: "#dc2626" },
+  pending: { label: "Requested", bg: "#eaf1fb", fg: "#1a4480", border: "#bcd0ec", dot: "#1a4480" },
+  approved: { label: "Approved", bg: "#eaf1fb", fg: "#1a4480", border: "#bcd0ec", dot: "#1a4480" },
+  rejected: { label: "Denied", bg: "#f1f5f9", fg: "#64748b", border: "#cbd5e1", dot: "#94a3b8" },
 };
 const statusOf = (s: string) => STATUS[s] || STATUS.pending;
 
@@ -55,7 +60,7 @@ export default function TimeOffCalendar() {
   const [error, setError] = useState("");
   const now = todayIso();
   const [cursor, setCursor] = useState(() => ({ y: +now.slice(0, 4), m: +now.slice(5, 7) - 1 }));
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [showDenied, setShowDenied] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [openReq, setOpenReq] = useState<Req | null>(null);
   const [fixing, setFixing] = useState<Req | null>(null);
@@ -63,7 +68,7 @@ export default function TimeOffCalendar() {
   const load = async () => {
     const { data, error: dbError } = await getSupabase()
       .from("time_off_requests")
-      .select("id, officer_name, absence_type, reason, dates_requested, requested_dates, dates_need_review, status, submitted_at")
+      .select("*")
       .order("submitted_at", { ascending: false });
     if (dbError) setError("Couldn't load time-off requests. Refresh to try again.");
     else setRows((data as Row[]) || []);
@@ -82,7 +87,7 @@ export default function TimeOffCalendar() {
     return { ...r, dates: p.dates, needsCheck: !p.confident };
   }), [rows]);
 
-  const visible = requests.filter((r) => filter === "all" || (r.status || "pending") === filter);
+  const visible = requests.filter((r) => showDenied || r.status !== "rejected");
   const byDay = useMemo(() => {
     const map = new Map<string, Req[]>();
     // Duplicate submissions from the same officer show once per day, keeping
@@ -149,7 +154,7 @@ export default function TimeOffCalendar() {
       `}</style>
       <div style={{ maxWidth: 1100, margin: "0 auto" }}>
 
-        <SupervisorHeader title="Time-off calendar" subtitle="Every request, whatever its status" active="calendar" />
+        <SupervisorHeader title="Time-off calendar" subtitle="Who's off, day by day" active="calendar" />
 
         <div style={{ background: WHITE, borderRadius: "0 0 16px 16px", boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", padding: "1rem 1rem 1.25rem" }}>
           {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", color: "#b91c1c", borderRadius: 12, padding: "0.75rem 1rem", marginBottom: "1rem" }}>{error}</div>}
@@ -180,18 +185,12 @@ export default function TimeOffCalendar() {
             <button type="button" onClick={() => move(1)} style={navBtn} aria-label="Next month">›</button>
             <button type="button" onClick={() => setCursor({ y: +now.slice(0, 4), m: +now.slice(5, 7) - 1 })} style={{ ...navBtn, width: "auto", padding: "0 0.9rem", fontSize: "0.88rem" }}>Today</button>
             <div style={{ flex: 1 }} />
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {(["all", "pending", "approved", "rejected"] as const).map((f) => (
-                <button key={f} type="button" onClick={() => setFilter(f)} style={{
-                  minHeight: 36, padding: "0.3rem 0.8rem", borderRadius: 999, fontFamily: "inherit", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
-                  border: `1.5px solid ${filter === f ? NAVY : BORDER}`, background: filter === f ? NAVY : WHITE, color: filter === f ? WHITE : TEXT,
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                }}>
-                  {f !== "all" && <span style={{ width: 8, height: 8, borderRadius: 99, background: statusOf(f).dot }} />}
-                  {f === "all" ? "All" : statusOf(f).label}
-                </button>
-              ))}
-            </div>
+            {requests.some((r) => r.status === "rejected") && (
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.88rem", color: MUTED, cursor: "pointer" }}>
+                <input type="checkbox" checked={showDenied} onChange={(e) => setShowDenied(e.target.checked)} style={{ width: 18, height: 18, accentColor: NAVY }} />
+                Show denied
+              </label>
+            )}
           </div>
 
           <div className="cal-grid" style={{ border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
@@ -294,7 +293,10 @@ export default function TimeOffCalendar() {
 
       {openReq && (
         <Sheet onClose={() => setOpenReq(null)}>
-          <RequestDetails r={openReq} onFix={() => { setFixing(openReq); setOpenReq(null); }} />
+          <RequestDetails r={openReq} onFix={() => { setFixing(openReq); setOpenReq(null); }} onPrinted={(id, at) => {
+            setRows((rs) => rs.map((x) => (x.id === id ? { ...x, printed_at: at } : x)));
+            setOpenReq((o) => (o && o.id === id ? { ...o, printed_at: at } : o));
+          }} />
         </Sheet>
       )}
 
@@ -319,19 +321,30 @@ function PersonRow({ r, onOpen }: { r: Req; onOpen: () => void }) {
         <span style={{ display: "block", fontWeight: 700, color: TEXT, fontSize: "0.95rem" }}>{r.needsCheck ? "⚠ " : ""}{r.officer_name}</span>
         {r.absence_type && <span style={{ display: "block", fontSize: "0.8rem", color: MUTED }}>{r.absence_type}</span>}
       </span>
-      <span style={{ fontSize: "0.72rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "capitalize", letterSpacing: "0.04em" }}>{st.label}</span>
+      {r.status !== "pending" && <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}` }}>{st.label}</span>}
+      {!r.printed_at && <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: "#eaf1fb", color: NAVY, border: "1px solid #bcd0ec" }}>New</span>}
     </button>
   );
 }
 
-function RequestDetails({ r, onFix }: { r: Req; onFix: () => void }) {
+function RequestDetails({ r, onFix, onPrinted }: { r: Req; onFix: () => void; onPrinted: (id: string, at: string) => void }) {
   const st = statusOf(r.status);
   const href = r.status === "pending" ? `/timeoff/approve?id=${r.id}` : `/timeoff/view?id=${r.id}`;
+  const print = () => {
+    const html = buildTimeOffFormDocument(r as unknown as TimeOffRequest, { blankManager: r.status === "pending" });
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); win.onload = () => { win.focus(); win.print(); }; }
+    if (!r.printed_at) {
+      const now = new Date().toISOString();
+      getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
+      onPrinted(r.id, now);
+    }
+  };
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
         <div style={{ flex: 1, fontSize: "1.2rem", fontWeight: 700, color: TEXT }}>{r.officer_name}</div>
-        <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}`, textTransform: "capitalize" }}>{st.label}</span>
+        {r.status !== "pending" && <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: st.bg, color: st.fg, border: `1px solid ${st.border}` }}>{st.label}</span>}
       </div>
       <Detail label="Type">{r.absence_type || "—"}</Detail>
       {r.reason && <Detail label="Reason">{r.reason}</Detail>}
@@ -339,9 +352,11 @@ function RequestDetails({ r, onFix }: { r: Req; onFix: () => void }) {
       <Detail label={r.needsCheck ? "Dates on the calendar (please check)" : "Dates on the calendar"}>
         {r.dates.length ? <DateGroups dates={r.dates} /> : <span style={{ color: "#9a3412" }}>None yet: tap Fix dates</span>}
       </Detail>
+      <Detail label="Printed">{r.printed_at ? new Date(r.printed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : <span style={{ color: NAVY, fontWeight: 700 }}>Not yet (new)</span>}</Detail>
       <Detail label="Submitted">{new Date(r.submitted_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}</Detail>
       <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
-        <a href={href} style={{ ...primaryBtn, flex: 1, textAlign: "center", textDecoration: "none" }}>{r.status === "pending" ? "Review & decide" : "Open request"}</a>
+        <button type="button" onClick={print} style={{ ...primaryBtn, flex: "1 1 100%" }}>{r.printed_at ? "Print again" : "Print"}</button>
+        <a href={href} style={{ ...secondaryBtn, flex: 1, textAlign: "center", textDecoration: "none" }}>Open request</a>
         <button type="button" onClick={onFix} style={{ ...secondaryBtn, flex: 1 }}>{r.needsCheck ? "Check dates" : "Fix dates"}</button>
       </div>
     </div>
