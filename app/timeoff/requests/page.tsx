@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Fragment } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildTimeOffFormDocument, TimeOffRequest } from "./timeoff-form-template";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
@@ -57,6 +57,14 @@ export default function RequestsPage() {
     return matchesFilter && matchesSearch;
   });
 
+  // On "All", requests that haven't been printed yet sit on top under "New".
+  const ordered = filter === "all" ? [...filtered.filter((r) => !r.printed_at), ...filtered.filter((r) => r.printed_at)] : filtered;
+  const groupHeading = (idx: number) => {
+    if (filter !== "all") return null;
+    const r = ordered[idx];
+    if (idx > 0 && !!ordered[idx - 1].printed_at === !!r.printed_at) return null;
+    return r.printed_at ? "Earlier" : "New — not printed yet";
+  };
   const newCount = requests.filter((r) => !r.printed_at).length;
   const upcomingCount = requests.filter(isUpcoming).length;
   const offToday = requests.filter((r) => r.status !== "rejected" && (r.requested_dates || []).includes(today)).length;
@@ -108,7 +116,7 @@ export default function RequestsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         <SupervisorHeader title="Time-off requests" active="timeoff" />
 
@@ -131,8 +139,12 @@ export default function RequestsPage() {
         ) : filtered.length === 0 ? (
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "2rem", textAlign: "center", color: MUTED, fontSize: "0.85rem" }}>No requests found.</div>
         ) : (
-          filtered.map((r) => (
-            <div key={r.id} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
+          ordered.map((r, idx) => (
+            <Fragment key={r.id}>
+            {groupHeading(idx) && (
+              <div style={{ background: SOFT_BG, borderLeft: `1px solid ${BORDER}`, borderRight: `1px solid ${BORDER}`, padding: "0.6rem 1.25rem", fontSize: "0.85rem", fontWeight: 700, color: r.printed_at ? MUTED : NAVY }}>{groupHeading(idx)}</div>
+            )}
+            <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: 4 }}>
                   <span style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{r.officer_name}</span>
@@ -178,6 +190,7 @@ export default function RequestsPage() {
                 </a>
               </div>
             </div>
+            </Fragment>
           ))
         )}
 

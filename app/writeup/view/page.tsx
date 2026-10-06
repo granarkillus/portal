@@ -150,31 +150,33 @@ export default function ViewPage() {
         {notice && (
           <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderTop: "none", borderRadius: "0 0 4px 4px" }}>
 
-            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
-              {[["Employee", notice.officer_name], ["Position", notice.position], ["Site", notice.client_site], ["Supervisor", notice.supervisor], ["Date", formatDate(notice.notice_date)], ["Action", notice.action_type]].map(([label, val]) => val ? (
-                <div key={label} style={{ fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", fontSize: "0.65rem", letterSpacing: "0.05em", color: MUTED }}>{label}: </span>
-                  <span style={{ color: TEXT }}>{val}</span>
-                </div>
-              ) : null)}
-              <div style={{ marginLeft: "auto" }}>
+            <div style={{ padding: "1rem 1.25rem 0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                <div style={{ fontSize: "1.25rem", fontWeight: 700, color: TEXT }}>{notice.officer_name}</div>
                 <span style={{
-                  fontSize: "0.68rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999,
-                  background: notice.signature === "REFUSED TO SIGN" ? "#fef2f2" : notice.signature === "SIGNED ON PAPER" ? "#e8f5e9" : notice.signature ? "#e8f5e9" : "#fff3cd",
-                  color: notice.signature === "REFUSED TO SIGN" ? "#b91c1c" : notice.signature === "SIGNED ON PAPER" ? GREEN : notice.signature ? GREEN : "#92400e",
-                  border: `1px solid ${notice.signature === "REFUSED TO SIGN" ? "#fca5a5" : notice.signature === "SIGNED ON PAPER" ? "#a5d6a7" : notice.signature ? "#a5d6a7" : "#fcd34d"}`,
-                  textTransform: "uppercase", letterSpacing: "0.05em",
+                  fontSize: "0.82rem", fontWeight: 700, padding: "4px 12px", borderRadius: 999,
+                  background: notice.signature === "REFUSED TO SIGN" ? "#fef2f2" : notice.signature ? "#e8f5e9" : "#fff7ed",
+                  color: notice.signature === "REFUSED TO SIGN" ? "#b91c1c" : notice.signature ? GREEN : "#9a3412",
+                  border: `1px solid ${notice.signature === "REFUSED TO SIGN" ? "#fca5a5" : notice.signature ? "#a5d6a7" : "#fdba74"}`,
                 }}>
-                  {notice.signature === "REFUSED TO SIGN" ? "Refused to Sign" : notice.signature === "SIGNED ON PAPER" ? "Signed on Paper" : notice.signature ? "Acknowledged" : "Pending Response"}
+                  {notice.signature === "REFUSED TO SIGN" ? "Refused to sign" : notice.signature === "SIGNED ON PAPER" ? "Signed on paper" : notice.signature ? "Acknowledged" : "Waiting for officer"}
                 </span>
+              </div>
+              <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.8rem 1rem", display: "grid", gridTemplateColumns: "auto 1fr", gap: "0.3rem 0.9rem", fontSize: "0.92rem" }}>
+                {[["Position", notice.position], ["Site", notice.client_site], ["Supervisor", notice.supervisor], ["Date", formatDate(notice.notice_date)], ["Action", notice.action_type]].filter(([, v]) => v).map(([label, val]) => (
+                  <div key={label} style={{ display: "contents" }}>
+                    <span style={{ color: MUTED }}>{label}</span>
+                    <span style={{ color: TEXT, fontWeight: 600 }}>{val}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {notice.infraction && <Section label="2. Current Situation – Infraction / Performance Issue(s)" content={notice.infraction} />}
-            {notice.facts && <Section label="3. Facts – WHO, WHAT, WHERE, WHEN, HOW" content={notice.facts} />}
+            {notice.infraction && <Section label="What happened" content={notice.infraction} />}
+            {notice.facts && <Section label="Facts" content={notice.facts} />}
             {notice.expectations && (
               <div>
-                <SectionBar label="4. Expectation – Future Behavior Expected" />
+                <SectionBar label="Expected going forward" />
                 <div style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", lineHeight: 1.7, color: TEXT }}>
                   {notice.expectations}
                   <div style={{ fontSize: "0.78rem", fontStyle: "italic", fontWeight: 600, background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.6rem 1rem", marginTop: "0.75rem" }}>
@@ -183,17 +185,17 @@ export default function ViewPage() {
                 </div>
               </div>
             )}
-            {notice.consequences && <Section label="5. Consequences – Next Steps" content={notice.consequences} />}
-            {notice.action_type && <Section label="6. Documentation of Corrective Action" content={notice.action_type} bold />}
+            {notice.consequences && <Section label="Next steps" content={notice.consequences} />}
+            {notice.action_type && <Section label="Corrective action" content={notice.action_type} bold />}
 
-            <SectionBar label="Supervisor Signature" />
+            <SectionBar label="Signed" />
             <div style={{ padding: "1rem 1.25rem", display: "flex", gap: "1.5rem" }}>
               <SigBlock label="Supervisor Signature" value={notice.supervisor_signature} />
               <SigBlock label="Date Signed" value={formatDate(notice.supervisor_date)} narrow />
               {notice.witness_name && <SigBlock label="Witness" value={notice.witness_name} />}
             </div>
 
-            <SectionBar label="7. Acknowledgement – Employee Response" />
+            <SectionBar label="Officer's response" />
             <div style={{ padding: "1rem 1.25rem" }}>
               {notice.signature === "REFUSED TO SIGN" ? (
                 <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "3px solid #b91c1c", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.85rem", color: "#b91c1c", fontWeight: 700 }}>
@@ -206,7 +208,7 @@ export default function ViewPage() {
                   </div>
                   <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                     <div>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>Decision</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 2 }}>Decision</div>
                       <div style={{ fontSize: "0.92rem", fontWeight: 700, color: notice.agreement === "agreed" ? GREEN : "#b91c1c" }}>
                         {notice.agreement === "agreed" ? "✓ Agreed" : "✗ Disagreed"}
                       </div>
@@ -214,7 +216,7 @@ export default function ViewPage() {
                   </div>
                   {notice.officer_comments && (
                     <div style={{ marginBottom: "0.75rem" }}>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 4 }}>Notes</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 4 }}>Notes</div>
                       <div style={{ fontSize: "0.85rem", lineHeight: 1.6, color: TEXT }}>{notice.officer_comments}</div>
                     </div>
                   )}
@@ -224,7 +226,7 @@ export default function ViewPage() {
                 <div style={{ background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "1rem 1.25rem" }}>
                   <div style={{ display: "flex", gap: "2rem", marginBottom: "0.75rem", flexWrap: "wrap" }}>
                     <div>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>Decision</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 2 }}>Decision</div>
                       <div style={{ fontSize: "0.92rem", fontWeight: 700, color: notice.agreement === "agreed" ? GREEN : "#b91c1c" }}>
                         {notice.agreement === "agreed" ? "✓ Agreed" : "✗ Disagreed"}
                       </div>
@@ -232,7 +234,7 @@ export default function ViewPage() {
                   </div>
                   {notice.officer_comments && (
                     <div style={{ marginBottom: "0.75rem" }}>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 4 }}>Employee Comments</div>
+                      <div style={{ fontSize: "0.82rem", fontWeight: 600, color: MUTED, marginBottom: 4 }}>Employee Comments</div>
                       <div style={{ fontSize: "0.85rem", lineHeight: 1.6, color: TEXT }}>{notice.officer_comments}</div>
                     </div>
                   )}
@@ -346,14 +348,18 @@ export default function ViewPage() {
 }
 
 function SectionBar({ label }: { label: string }) {
-  return <div style={{ margin: "1.75rem 1.25rem 0", paddingBottom: "0.5rem", borderBottom: "2px solid #1a4480", color: "#1a4480", fontSize: "1.05rem", fontWeight: 700 }}>{label}</div>;
+  return (
+    <div style={{ margin: "1.5rem 1.25rem 0", color: TEXT, fontSize: "1.1rem", fontWeight: 700 }}>
+      {label}
+    </div>
+  );
 }
 
 function Section({ label, content, bold }: { label: string; content: string; bold?: boolean }) {
   return (
     <div>
       <SectionBar label={label} />
-      <div style={{ padding: "1rem 1.25rem", fontSize: "0.85rem", lineHeight: 1.7, color: "#1a1a2e", fontWeight: bold ? 700 : 400 }}>{content}</div>
+      <div style={{ padding: "0.5rem 1.25rem 0.25rem", fontSize: "0.98rem", lineHeight: 1.65, color: "#0f172a", whiteSpace: "pre-wrap", fontWeight: bold ? 700 : 400 }}>{content}</div>
     </div>
   );
 }
