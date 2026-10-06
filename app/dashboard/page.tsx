@@ -2,21 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { C } from "@/lib/theme";
+import { fmtDate, fmtTime } from "@/lib/format";
+import Icon from "@/components/icon";
 
 const getSupabase = () =>
   createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-
-const NAVY = "#1a4480";
-const DARK = "#243b5e";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
 
 interface Profile {
   full_name: string;
@@ -73,12 +67,6 @@ export default function OfficerDashboard() {
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<Record<string, string>>({});
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = iso.split("T")[0];
-    const [y, m, day] = d.split("-");
-    return `${m}/${day}/${y}`;
-  };
 
   useEffect(() => {
     const supabase = getSupabase();
@@ -164,16 +152,16 @@ export default function OfficerDashboard() {
   const encodedEmpNum = encodeURIComponent(profile?.employee_number || "");
 
   const formLinks = [
-    { label: "Submit Daily Activity Report", href: `/dar`, icon: "📋" },
-    { label: "Request Time Off", href: `/timeoff`, icon: "📅" },
-    { label: "Submit Call-Off Notice", href: `/calloff`, icon: "📞" },
+    { label: "Submit Daily Activity Report", href: `/dar`, icon: "clipboard" as const },
+    { label: "Request Time Off", href: `/timeoff`, icon: "calendar" as const },
+    { label: "Submit Call-Off Notice", href: `/calloff`, icon: "phone" as const },
   ];
 
   const statusBadge = (status: string) => {
     const map: Record<string, { bg: string; color: string; border: string }> = {
-      pending: { bg: "#fff3cd", color: "#92400e", border: "#fcd34d" },
-      approved: { bg: "#e8f5e9", color: GREEN, border: "#a5d6a7" },
-      rejected: { bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5" },
+      pending: { bg: C.amberTint, color: C.amber, border: C.amberLine },
+      approved: { bg: C.greenTint, color: C.green, border: C.greenLine },
+      rejected: { bg: C.redTint, color: C.red, border: C.redLine },
     };
     const s = map[status] || map.pending;
     return <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, textTransform: "uppercase", letterSpacing: "0.04em" }}>{status}</span>;
@@ -181,28 +169,28 @@ export default function OfficerDashboard() {
 
   const excusalBadge = (excusalStatus: string | null) => {
     const map: Record<string, { bg: string; color: string; border: string; label: string }> = {
-      excused: { bg: "#e8f5e9", color: GREEN, border: "#a5d6a7", label: "Excused" },
-      unexcused: { bg: "#fef2f2", color: "#b91c1c", border: "#fca5a5", label: "Unexcused" },
-      pending: { bg: "#fff3cd", color: "#92400e", border: "#fcd34d", label: "Pending Review" },
+      excused: { bg: C.greenTint, color: C.green, border: C.greenLine, label: "Excused" },
+      unexcused: { bg: C.redTint, color: C.red, border: C.redLine, label: "Unexcused" },
+      pending: { bg: C.amberTint, color: C.amber, border: C.amberLine, label: "Pending Review" },
     };
     const s = map[excusalStatus || "pending"] || map.pending;
     return <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: s.bg, color: s.color, border: `1px solid ${s.border}`, textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}>{s.label}</span>;
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)" }}>
 
       {/* Nav */}
-      <div style={{ background: NAVY, padding: "0.75rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div style={{ background: C.navy, padding: "0.75rem 2rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-          <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
             Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
           </div>
           <div style={{ color: "rgba(255,255,255,0.5)", fontSize: "0.75rem" }}>Officer Portal · Washington University</div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
           <div style={{ color: "rgba(255,255,255,0.7)", fontSize: "0.78rem" }}>{profile?.full_name || email}</div>
-          <button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: WHITE, borderRadius: 12, padding: "0.3rem 0.75rem", fontSize: "0.75rem", cursor: "pointer", fontFamily: "inherit" }}>
+          <button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.3)", color: C.white, borderRadius: 12, padding: "0.55rem 0.75rem", fontSize: "0.85rem", cursor: "pointer", fontFamily: "inherit" }}>
             Sign Out
           </button>
         </div>
@@ -212,7 +200,7 @@ export default function OfficerDashboard() {
 
         {awaitingApproval && (
           <div style={{ background: "#fffbeb", border: "1px solid #fcd34d", borderLeft: "4px solid #d97706", borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem" }}>
-            <div style={{ fontWeight: 700, color: "#92400e", fontSize: "0.92rem", marginBottom: 4 }}>Account awaiting supervisor approval</div>
+            <div style={{ fontWeight: 700, color: C.amber, fontSize: "0.92rem", marginBottom: 4 }}>Account awaiting supervisor approval</div>
             <div style={{ fontSize: "0.78rem", color: "#78350f", lineHeight: 1.5 }}>
               You can submit forms now. Your past call-offs, DARs and requests will show here once a supervisor confirms your account.
             </div>
@@ -221,10 +209,10 @@ export default function OfficerDashboard() {
 
         {/* Pending acknowledgement alert */}
         {pendingAck.length > 0 && (
-          <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderLeft: "4px solid #b91c1c", borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+          <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderLeft: "4px solid #b91c1c", borderRadius: 12, padding: "1rem 1.5rem", marginBottom: "1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <div style={{ fontWeight: 700, color: "#b91c1c", fontSize: "0.92rem", marginBottom: 4 }}>
-                ⚠ Action Required — {pendingAck.length} Pending Disciplinary Acknowledgement{pendingAck.length > 1 ? "s" : ""}
+              <div style={{ fontWeight: 700, color: C.red, fontSize: "0.92rem", marginBottom: 4 }}>
+                <Icon name="alert" size={16} style={{ marginRight: 6 }} />Action Required — {pendingAck.length} Pending Disciplinary Acknowledgement{pendingAck.length > 1 ? "s" : ""}
               </div>
               <div style={{ fontSize: "0.78rem", color: "#7f1d1d" }}>
                 You have disciplinary notices that require your acknowledgement. Please review and respond.
@@ -232,7 +220,7 @@ export default function OfficerDashboard() {
             </div>
             <a
               href={`/writeup/respond?id=${pendingAck[0].id}`}
-              style={{ background: "#b91c1c", color: WHITE, borderRadius: 12, padding: "0.5rem 1.25rem", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}
+              style={{ background: C.red, color: C.white, borderRadius: 12, padding: "0.5rem 1.25rem", fontSize: "0.82rem", fontWeight: 700, textDecoration: "none", textTransform: "uppercase", letterSpacing: "0.04em", whiteSpace: "nowrap" }}
             >
               Review Now
             </a>
@@ -242,14 +230,14 @@ export default function OfficerDashboard() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
 
           {/* Quick form links */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Submit a Form</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Submit a Form</span>
             </div>
             <div style={{ padding: "1rem 1.5rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {formLinks.map((link) => (
-                <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, textDecoration: "none", fontSize: "0.88rem", fontWeight: 600, color: NAVY }}>
-                  <span style={{ fontSize: "1.1rem" }}>{link.icon}</span>
+                <a key={link.label} href={link.href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.75rem 1rem", background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 12, textDecoration: "none", fontSize: "0.88rem", fontWeight: 600, color: C.navy }}>
+                  <Icon name={link.icon} size={20} color={C.navy} />
                   {link.label}
                   <svg style={{ marginLeft: "auto" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </a>
@@ -258,13 +246,13 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Profile */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>My Profile</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>My Profile</span>
             </div>
             <div style={{ padding: "1.25rem 1.5rem" }}>
               {loading ? (
-                <div style={{ color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
+                <div style={{ color: C.muted, fontSize: "0.82rem" }}>Loading...</div>
               ) : (
                 <>
                   {[
@@ -274,8 +262,8 @@ export default function OfficerDashboard() {
                     ["Email", email],
                   ].map(([label, val]) => val ? (
                     <div key={label} style={{ marginBottom: "0.65rem" }}>
-                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: MUTED, marginBottom: 2 }}>{label}</div>
-                      <div style={{ fontSize: "0.88rem", color: TEXT, fontWeight: label === "Name" ? 700 : 400 }}>{val}</div>
+                      <div style={{ fontSize: "0.65rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: C.muted, marginBottom: 2 }}>{label}</div>
+                      <div style={{ fontSize: "0.88rem", color: C.text, fontWeight: label === "Name" ? 700 : 400 }}>{val}</div>
                     </div>
                   ) : null)}
                 </>
@@ -284,22 +272,22 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Time-off requests */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Time-Off Requests</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Time-Off Requests</span>
               <a href="/timeoff" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem" }}>Loading...</div>
               ) : timeOff.length === 0 ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem", fontStyle: "italic" }}>No requests submitted yet.</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem", fontStyle: "italic" }}>No requests submitted yet.</div>
               ) : (
                 timeOff.map((r, i) => (
-                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < timeOff.length - 1 ? `1px solid ${BORDER}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < timeOff.length - 1 ? `1px solid ${C.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{r.absence_type}</div>
-                      <div style={{ fontSize: "0.72rem", color: MUTED }}>{r.dates_requested}</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.text, marginBottom: 2 }}>{r.absence_type}</div>
+                      <div style={{ fontSize: "0.72rem", color: C.muted }}>{r.dates_requested}</div>
                     </div>
                     {statusBadge(r.status)}
                   </div>
@@ -309,29 +297,29 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Call-offs */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Call-Off History</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Call-Off History</span>
               <a href="/calloff" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem" }}>Loading...</div>
               ) : callOffs.length === 0 ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem", fontStyle: "italic" }}>No call-offs on record.</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem", fontStyle: "italic" }}>No call-offs on record.</div>
               ) : (
                 callOffs.map((r, i) => (
-                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < callOffs.length - 1 ? `1px solid ${BORDER}` : "none" }}>
+                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < callOffs.length - 1 ? `1px solid ${C.border}` : "none" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.75rem" }}>
                       <div>
-                        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{formatDate(r.shift_date)} — {r.reason}</div>
-                        <div style={{ fontSize: "0.72rem", color: MUTED }}>{r.notice_type}</div>
+                        <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.text, marginBottom: 2 }}>{fmtDate(r.shift_date)} — {r.reason}</div>
+                        <div style={{ fontSize: "0.72rem", color: C.muted }}>{r.notice_type}</div>
                       </div>
                       {excusalBadge(r.excusal_status)}
                     </div>
 
                     {r.document_url ? (
-                      <div style={{ fontSize: "0.7rem", color: MUTED, marginTop: "0.5rem", display: "flex", alignItems: "center", gap: 4 }}>
+                      <div style={{ fontSize: "0.7rem", color: C.muted, marginTop: "0.5rem", display: "flex", alignItems: "center", gap: 4 }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                         Documentation attached
                       </div>
@@ -347,12 +335,12 @@ export default function OfficerDashboard() {
                         <button
                           onClick={() => document.getElementById(`doc-upload-${r.id}`)?.click()}
                           disabled={uploadingId === r.id}
-                          style={{ background: "none", border: `1px solid ${BORDER}`, color: NAVY, borderRadius: 12, padding: "0.3rem 0.65rem", fontSize: "0.7rem", fontWeight: 600, cursor: uploadingId === r.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploadingId === r.id ? 0.6 : 1 }}
+                          style={{ background: "none", border: `1px solid ${C.border}`, color: C.navy, borderRadius: 12, padding: "0.55rem 0.65rem", fontSize: "0.85rem", fontWeight: 600, cursor: uploadingId === r.id ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: uploadingId === r.id ? 0.6 : 1 }}
                         >
                           {uploadingId === r.id ? "Uploading..." : "+ Add Documentation"}
                         </button>
                         {uploadError[r.id] && (
-                          <div style={{ fontSize: "0.68rem", color: "#b91c1c", marginTop: 4 }}>{uploadError[r.id]}</div>
+                          <div style={{ fontSize: "0.68rem", color: C.red, marginTop: 4 }}>{uploadError[r.id]}</div>
                         )}
                       </div>
                     )}
@@ -363,21 +351,21 @@ export default function OfficerDashboard() {
           </div>
 
           {/* DARs */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recent DARs</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recent DARs</span>
               <a href="/dar" style={{ color: "rgba(255,255,255,0.6)", fontSize: "0.68rem", textDecoration: "none" }}>+ New</a>
             </div>
             <div>
               {loading ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem" }}>Loading...</div>
               ) : dars.length === 0 ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem", fontStyle: "italic" }}>No DARs submitted yet.</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem", fontStyle: "italic" }}>No DARs submitted yet.</div>
               ) : (
                 dars.map((r, i) => (
-                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < dars.length - 1 ? `1px solid ${BORDER}` : "none" }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{formatDate(r.date)}</div>
-                    <div style={{ fontSize: "0.72rem", color: MUTED }}>Shift start: {r.shift_start}</div>
+                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < dars.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.text, marginBottom: 2 }}>{fmtDate(r.date)}</div>
+                    <div style={{ fontSize: "0.72rem", color: C.muted }}>Shift start: {fmtTime(r.shift_start)}</div>
                   </div>
                 ))
               )}
@@ -385,26 +373,26 @@ export default function OfficerDashboard() {
           </div>
 
           {/* Disciplinary */}
-          <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12, overflow: "hidden" }}>
-            <div style={{ background: DARK, padding: "0.6rem 1.5rem" }}>
-              <span style={{ color: WHITE, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Disciplinary Notices</span>
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
+            <div style={{ background: C.dark, padding: "0.6rem 1.5rem" }}>
+              <span style={{ color: C.white, fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Disciplinary Notices</span>
             </div>
             <div>
               {loading ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem" }}>Loading...</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem" }}>Loading...</div>
               ) : disciplinary.length === 0 ? (
-                <div style={{ padding: "1rem 1.5rem", color: MUTED, fontSize: "0.82rem", fontStyle: "italic" }}>No disciplinary notices on record.</div>
+                <div style={{ padding: "1rem 1.5rem", color: C.muted, fontSize: "0.82rem", fontStyle: "italic" }}>No disciplinary notices on record.</div>
               ) : (
                 disciplinary.map((r, i) => (
-                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < disciplinary.length - 1 ? `1px solid ${BORDER}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div key={r.id} style={{ padding: "0.75rem 1.5rem", borderBottom: i < disciplinary.length - 1 ? `1px solid ${C.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: TEXT, marginBottom: 2 }}>{r.infraction || r.action_type || "Notice"}</div>
-                      <div style={{ fontSize: "0.72rem", color: MUTED }}>{formatDate(r.notice_date)}</div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: 600, color: C.text, marginBottom: 2 }}>{r.infraction || r.action_type || "Notice"}</div>
+                      <div style={{ fontSize: "0.72rem", color: C.muted }}>{fmtDate(r.notice_date)}</div>
                     </div>
                     {r.signature ? (
-                      <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#e8f5e9", color: GREEN, border: "1px solid #a5d6a7", textTransform: "uppercase" }}>Acknowledged</span>
+                      <span style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: C.greenTint, color: C.green, border: "1px solid #a5d6a7", textTransform: "uppercase" }}>Acknowledged</span>
                     ) : (
-                      <a href={`/writeup/respond?id=${r.id}`} style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: "#fef2f2", color: "#b91c1c", border: "1px solid #fca5a5", textTransform: "uppercase", textDecoration: "none" }}>
+                      <a href={`/writeup/respond?id=${r.id}`} style={{ fontSize: "0.65rem", fontWeight: 700, padding: "2px 7px", borderRadius: 999, background: C.redTint, color: C.red, border: "1px solid #fca5a5", textTransform: "uppercase", textDecoration: "none" }}>
                         Respond
                       </a>
                     )}

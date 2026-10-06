@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import OfflineSupport from '@/components/offline-support'
+import { Toaster } from '@/components/feedback'
 
 export const metadata: Metadata = {
   title: "Allied Universal · Washington University",
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <OfflineSupport />
         {children}
+        <Toaster />
       </body>
     </html>
   )

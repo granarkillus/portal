@@ -10,14 +10,8 @@ import HourSelect from "@/components/hour-select";
 import { DoneCard, outlineButton } from "@/components/ui";
 import { POSTS } from "@/lib/posts";
 import { BLANK, MIN_ENTRIES, PEOPLE, entryProblem, normalizeTime, placesFor, shiftBlocks, suggestionsFor, toMinutes } from "@/lib/dar-suggestions";
-
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
+import { C, btnStyle } from "@/lib/theme";
+import Icon from "@/components/icon";
 
 interface ActivityEntry {
   id: number;
@@ -297,33 +291,32 @@ export default function DARForm() {
   if (submitted) {
     return (
       <DoneCard title={queued ? "DAR saved" : "DAR submitted"} tone={queued ? "wait" : "ok"}>
-        <div style={{ color: MUTED, fontSize: "0.95rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
+        <div style={{ color: C.muted, fontSize: "0.95rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
           {queued
             ? <>No signal right now, so your DAR for {submittedDate || "today"} is saved on this phone. It will send automatically when you&apos;re back online. Just open this app again if it hasn&apos;t sent.</>
             : <>Your Daily Activity Report for {submittedDate || "today"} has been recorded.</>}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-          <a href="/forms" style={{ ...outlineButton, background: NAVY, color: WHITE }}>Done</a>
+          <a href="/forms" style={{ ...outlineButton, background: C.navy, color: C.white }}>Done</a>
           <a href="/dar/my-dars" style={outlineButton}>View my recent DARs</a>
-          <button type="button" onClick={handleReset} style={{ ...outlineButton, color: MUTED, borderColor: BORDER }}>Submit another DAR</button>
+          <button type="button" onClick={handleReset} style={{ ...outlineButton, color: C.muted, borderColor: C.border }}>Submit another DAR</button>
         </div>
       </DoneCard>
     );
   }
 
-
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto", background: WHITE, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: C.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
 
         <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
             </div>
             <a href="/forms" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 }}>‹ All forms</a>
           </div>
-          <div style={{ color: WHITE, fontSize: "1.5rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Daily Activity Report</div>
+          <div style={{ color: C.white, fontSize: "1.5rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>Daily Activity Report</div>
           <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.95rem", marginTop: 4 }}>Enter your shift, then tap to fill in your activity.</div>
         </div>
 
@@ -335,12 +328,12 @@ export default function DARForm() {
           <div style={{ padding: "0.9rem 1.25rem 0" }}>
             <Field label="Your name" value={form.officerName} onChange={set("officerName")} required placeholder="Full legal name" />
             <div style={{ marginBottom: "1rem" }}>
-              <Label>Date of shift<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
+              <Label>Date of shift<span style={{ color: C.red, marginLeft: 2 }}>*</span></Label>
               <div style={chipRow}>
                 {[["Today", today], ["Yesterday", yesterday]].map(([label, value]) => {
                   const on = !otherDate && form.date === value;
                   return (
-                    <button key={label} type="button" aria-pressed={on} onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: value })); }} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                    <button key={label} type="button" aria-pressed={on} onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: value })); }} style={{ ...chip, background: on ? C.navy : C.white, color: on ? C.white : C.text, borderColor: on ? C.navy : C.border }}>
                       {on ? "✓ " : ""}{label}
                     </button>
                   );
@@ -348,7 +341,7 @@ export default function DARForm() {
                 {(() => {
                   const on = otherDate || (form.date !== today && form.date !== yesterday);
                   return (
-                    <button type="button" aria-pressed={on} onClick={() => setOtherDate(true)} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                    <button type="button" aria-pressed={on} onClick={() => setOtherDate(true)} style={{ ...chip, background: on ? C.navy : C.white, color: on ? C.white : C.text, borderColor: on ? C.navy : C.border }}>
                       {on ? `✓ ${form.date || "Another day"}` : "Another day"}
                     </button>
                   );
@@ -359,9 +352,9 @@ export default function DARForm() {
               )}
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.88rem", color: MUTED, marginBottom: "1rem" }}>
-              <span>📍 {form.clientSite || "—"} · {form.branch || "—"}</span>
-              <button type="button" onClick={() => setEditSite((v) => !v)} style={{ background: "none", border: "none", padding: 0, minHeight: 0, color: NAVY, fontWeight: 700, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem" }}>{editSite ? "Done" : "Edit"}</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.88rem", color: C.muted, marginBottom: "1rem" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="pin" size={15} />{form.clientSite || "—"} · {form.branch || "—"}</span>
+              <button type="button" onClick={() => setEditSite((v) => !v)} style={{ background: "none", border: "none", padding: 0, minHeight: 0, color: C.navy, fontWeight: 700, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "0.85rem" }}>{editSite ? "Done" : "Edit"}</button>
             </div>
             {editSite && (
               <Row>
@@ -375,7 +368,7 @@ export default function DARForm() {
                 {POSTS.map((p) => {
                   const on = form.scheduledShift.trim().toLowerCase() === p.toLowerCase();
                   return (
-                    <button key={p} type="button" aria-pressed={on} onClick={() => setForm((f) => ({ ...f, scheduledShift: p }))} style={{ ...chip, background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                    <button key={p} type="button" aria-pressed={on} onClick={() => setForm((f) => ({ ...f, scheduledShift: p }))} style={{ ...chip, background: on ? C.navy : C.white, color: on ? C.white : C.text, borderColor: on ? C.navy : C.border }}>
                       {on ? "✓ " : ""}{p}
                     </button>
                   );
@@ -383,12 +376,12 @@ export default function DARForm() {
               </div>
               <input value={form.scheduledShift} onChange={set("scheduledShift")} placeholder="Tap your post, or type it" style={inputStyle} />
             </div>
-            <Label>Received items <span style={{ color: MUTED, fontWeight: 400, fontSize: "0.85rem" }}>(tap all that apply)</span></Label>
+            <Label>Received items <span style={{ color: C.muted, fontWeight: 400, fontSize: "0.85rem" }}>(tap all that apply)</span></Label>
             <div style={{ ...chipRow, gap: "0.5rem", marginBottom: "0.5rem" }}>
               {([["receivedRadio", "Radio"], ["receivedPager", "Pager"], ["receivedKeys", "Keys"], ["receivedDetex", "Detex"]] as const).map(([field, label]) => {
                 const on = form[field];
                 return (
-                  <button key={field} type="button" aria-pressed={on} onClick={toggle(field)} style={{ ...chip, minHeight: 44, padding: "0.5rem 1rem", background: on ? NAVY : WHITE, color: on ? WHITE : TEXT, borderColor: on ? NAVY : BORDER }}>
+                  <button key={field} type="button" aria-pressed={on} onClick={toggle(field)} style={{ ...chip, minHeight: 44, padding: "0.5rem 1rem", background: on ? C.navy : C.white, color: on ? C.white : C.text, borderColor: on ? C.navy : C.border }}>
                     {on ? "✓ " : ""}{label}
                   </button>
                 );
@@ -398,46 +391,46 @@ export default function DARForm() {
 
           <SectionBar label="Your shift" />
           <div id="shift-times" style={{ padding: "0.9rem 1.25rem 0" }}>
-            <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "0.75rem" }}>Start here: your activity times fill in from your shift.</div>
+            <div style={{ fontSize: "0.85rem", color: C.muted, marginBottom: "0.75rem" }}>Start here: your activity times fill in from your shift.</div>
             {lastShift && !lastShiftApplied && (
-              <button type="button" onClick={useLastShift} style={{ display: "flex", alignItems: "center", gap: "0.6rem", width: "100%", textAlign: "left", background: "#eaf1fb", border: `1.5px solid ${NAVY}`, borderRadius: 12, padding: "0.75rem 0.9rem", marginBottom: "1rem", cursor: "pointer", fontFamily: "inherit", color: NAVY, minHeight: 0 }}>
+              <button type="button" onClick={useLastShift} style={{ display: "flex", alignItems: "center", gap: "0.6rem", width: "100%", textAlign: "left", background: C.navyTint, border: `1.5px solid ${C.navy}`, borderRadius: 12, padding: "0.75rem 0.9rem", marginBottom: "1rem", cursor: "pointer", fontFamily: "inherit", color: C.navy, minHeight: 0 }}>
                 <span style={{ fontSize: "1.1rem" }}>↺</span>
                 <span style={{ flex: 1 }}>
                   <span style={{ display: "block", fontWeight: 700, fontSize: "0.95rem" }}>Same as last time</span>
-                  <span style={{ display: "block", fontSize: "0.85rem", color: MUTED }}>{lastShift.post ? `${lastShift.post} · ` : ""}{shiftLabel(lastShift.start)}–{shiftLabel(lastShift.end)}</span>
+                  <span style={{ display: "block", fontSize: "0.85rem", color: C.muted }}>{lastShift.post ? `${lastShift.post} · ` : ""}{shiftLabel(lastShift.start)}–{shiftLabel(lastShift.end)}</span>
                 </span>
                 <span style={{ fontWeight: 700, fontSize: "0.88rem" }}>Use ›</span>
               </button>
             )}
             <div className="stack-sm" style={{ display: "flex", gap: "1rem" }}>
               <div style={{ flex: 1, marginBottom: "1rem" }}>
-                <Label>Time In (shift start)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
-                <HourSelect ariaLabel="Time In" value={form.shiftStart} onChange={(v) => setForm((f) => ({ ...f, shiftStart: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftStart) === null ? "#b91c1c" : "#d1d5db" }} />
+                <Label>Time In (shift start)<span style={{ color: C.red, marginLeft: 2 }}>*</span></Label>
+                <HourSelect ariaLabel="Time In" value={form.shiftStart} onChange={(v) => setForm((f) => ({ ...f, shiftStart: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftStart) === null ? C.red : "#d1d5db" }} />
               </div>
               <div style={{ flex: 1, marginBottom: "1rem" }}>
-                <Label>Time Out (shift end)<span style={{ color: "#b3261e", marginLeft: 2 }}>*</span></Label>
-                <HourSelect ariaLabel="Time Out" value={form.shiftEnd} onChange={(v) => setForm((f) => ({ ...f, shiftEnd: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftEnd) === null ? "#b91c1c" : "#d1d5db" }} />
+                <Label>Time Out (shift end)<span style={{ color: C.red, marginLeft: 2 }}>*</span></Label>
+                <HourSelect ariaLabel="Time Out" value={form.shiftEnd} onChange={(v) => setForm((f) => ({ ...f, shiftEnd: v }))} style={{ ...inputStyle, borderColor: triedSubmit && toMinutes(form.shiftEnd) === null ? C.red : "#d1d5db" }} />
               </div>
             </div>
           </div>
 
           {suggestYesterday && (
-            <div style={{ margin: "0.75rem 1.25rem 0", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center", fontSize: "0.9rem", color: "#9a3412" }}>
-              <span style={{ flex: 1 }}>🌙 Overnight shift: it started yesterday. Use yesterday&apos;s date?</span>
-              <button type="button" onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: yesterday })); }} style={{ background: "#9a3412", color: WHITE, border: "none", borderRadius: 999, padding: "0.4rem 0.85rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.85rem", cursor: "pointer", minHeight: 0, whiteSpace: "nowrap" }}>Use {yesterday.slice(0, 5)}</button>
+            <div style={{ margin: "0.75rem 1.25rem 0", background: C.orangeTint, border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 0.9rem", display: "flex", gap: "0.6rem", alignItems: "center", fontSize: "0.9rem", color: C.orange }}>
+              <Icon name="moon" size={18} /><span style={{ flex: 1 }}>Overnight shift: it started yesterday. Use yesterday&apos;s date?</span>
+              <button type="button" onClick={() => { setOtherDate(false); setForm((f) => ({ ...f, date: yesterday })); }} style={{ background: C.orange, color: C.white, border: "none", borderRadius: 999, padding: "0.4rem 0.85rem", fontWeight: 700, fontFamily: "inherit", fontSize: "0.85rem", cursor: "pointer", minHeight: 0, whiteSpace: "nowrap" }}>Use {yesterday.slice(0, 5)}</button>
             </div>
           )}
 
           <SectionBar label="Activity" />
           <div style={{ padding: "0.9rem 1.25rem 0" }}>
             {!shiftReady ? (
-              <div style={{ background: SOFT_BG, border: `1.5px dashed ${BORDER}`, borderRadius: 12, padding: "1.25rem", textAlign: "center", color: MUTED, fontSize: "0.95rem", lineHeight: 1.5 }}>
-                ⏰ Enter your <strong style={{ color: TEXT }}>Time In</strong> and <strong style={{ color: TEXT }}>Time Out</strong> above.<br />Your activity entries will be set up for you.
+              <div style={{ background: C.softBg, border: `1.5px dashed ${C.border}`, borderRadius: 12, padding: "1.25rem", textAlign: "center", color: C.muted, fontSize: "0.95rem", lineHeight: 1.5 }}>
+                <Icon name="clock" size={16} style={{ marginRight: 6 }} />Enter your <strong style={{ color: C.text }}>Time In</strong> and <strong style={{ color: C.text }}>Time Out</strong> above.<br />Your activity entries will be set up for you.
               </div>
             ) : (
               <>
-                <div style={{ fontSize: "0.85rem", color: MUTED, marginBottom: "1rem", lineHeight: 1.5 }}>
-                  At least {MIN_ENTRIES} entries. <strong style={{ color: TEXT }}>Tap an idea</strong> to start a line, then tap or type to fill in the blank, or just write your own. Mark an asterisk (*) next to any security incident.
+                <div style={{ fontSize: "0.85rem", color: C.muted, marginBottom: "1rem", lineHeight: 1.5 }}>
+                  At least {MIN_ENTRIES} entries. <strong style={{ color: C.text }}>Tap an idea</strong> to start a line, then tap or type to fill in the blank, or just write your own. Mark an asterisk (*) next to any security incident.
                 </div>
 
                 {entries.map((entry, index) => {
@@ -453,15 +446,15 @@ export default function DARForm() {
                       ? PEOPLE
                       : placesFor(form.scheduledShift).slice(0, 10);
                   return (
-                    <div key={entry.id} id={`entry-${entry.id}`} style={{ background: SOFT_BG, border: `1.5px solid ${issue ? "#fca5a5" : BORDER}`, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "0.85rem" }}>
+                    <div key={entry.id} id={`entry-${entry.id}`} style={{ background: C.softBg, border: `1.5px solid ${issue ? C.redLine : C.border}`, borderRadius: 14, padding: "0.85rem 1rem", marginBottom: "0.85rem" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.6rem" }}>
-                        <span style={{ fontSize: "0.75rem", fontWeight: 800, color: NAVY, textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry {index + 1}</span>
+                        <span style={{ fontSize: "0.75rem", fontWeight: 800, color: C.navy, textTransform: "uppercase", letterSpacing: "0.05em" }}>Entry {index + 1}</span>
                         <input aria-label="From" value={entry.from} onChange={(e) => updateEntry(entry.id, "from", e.target.value)} onBlur={(e) => { const v = normalizeTime(e.target.value, form.shiftStart, form.shiftEnd); if (v !== e.target.value) updateEntry(entry.id, "from", v); }} placeholder="From" inputMode="numeric" style={timeBox} />
-                        <span style={{ color: MUTED }}>–</span>
+                        <span style={{ color: C.muted }}>–</span>
                         <input aria-label="To" value={entry.to} onChange={(e) => updateEntry(entry.id, "to", e.target.value)} onBlur={(e) => { const v = normalizeTime(e.target.value, form.shiftStart, form.shiftEnd); if (v !== e.target.value) updateEntry(entry.id, "to", v); }} placeholder="To" inputMode="numeric" style={timeBox} />
                         <div style={{ flex: 1 }} />
                         {entries.length > MIN_ENTRIES && (
-                          <button type="button" onClick={() => removeEntry(entry.id)} style={{ background: "none", border: "none", color: MUTED, cursor: "pointer", fontSize: "0.8rem", padding: "2px 4px", minHeight: 0 }}>Remove</button>
+                          <button type="button" onClick={() => removeEntry(entry.id)} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: "0.8rem", padding: "2px 4px", minHeight: 0 }}>Remove</button>
                         )}
                       </div>
 
@@ -471,16 +464,16 @@ export default function DARForm() {
                         onChange={(e) => updateEntry(entry.id, "activity", e.target.value)}
                         placeholder="Tap an idea below, or type what you did"
                         rows={2}
-                        style={{ ...inputStyle, resize: "vertical", minHeight: 64, lineHeight: 1.45, background: WHITE }}
+                        style={{ ...inputStyle, resize: "vertical", minHeight: 64, lineHeight: 1.45, background: C.white }}
                       />
-                      {issue && <div style={{ color: "#b91c1c", fontSize: "0.85rem", fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>{issue}</div>}
+                      {issue && <div style={{ color: C.red, fontSize: "0.85rem", fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>{issue}</div>}
 
                       {hasBlank && (
                         <div style={{ marginTop: "0.5rem" }}>
-                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "#9a3412", marginBottom: 4 }}>Fill in the blank: tap one or type it</div>
+                          <div style={{ fontSize: "0.78rem", fontWeight: 700, color: C.orange, marginBottom: 4 }}>Fill in the blank: tap one or type it</div>
                           <div style={chipRow}>
                             {fillChoices.map((w) => (
-                              <button key={w} type="button" onClick={() => fillBlank(entry.id, w)} style={{ ...chip, borderColor: "#fdba74", background: "#fff7ed", color: "#9a3412" }}>{w}</button>
+                              <button key={w} type="button" onClick={() => fillBlank(entry.id, w)} style={{ ...chip, borderColor: "#fdba74", background: C.orangeTint, color: C.orange }}>{w}</button>
                             ))}
                           </div>
                         </div>
@@ -494,7 +487,7 @@ export default function DARForm() {
                                 + {idea.replace(/___/g, "…")}
                               </button>
                             ))}
-                            <button type="button" onClick={() => setSeeds((sd) => ({ ...sd, [entry.id]: (sd[entry.id] || 0) + 1 }))} style={{ ...chip, background: "none", borderStyle: "dashed", color: NAVY }}>
+                            <button type="button" onClick={() => setSeeds((sd) => ({ ...sd, [entry.id]: (sd[entry.id] || 0) + 1 }))} style={{ ...chip, background: "none", borderStyle: "dashed", color: C.navy }}>
                               ↻ More ideas
                             </button>
                           </div>
@@ -506,10 +499,10 @@ export default function DARForm() {
                 })}
 
                 {triedSubmit && sameEverywhere && (
-                  <div style={{ color: "#b91c1c", fontSize: "0.88rem", fontWeight: 600, marginBottom: "0.75rem" }}>Your entries all say the same thing. Describe what you did in each time block.</div>
+                  <div style={{ color: C.red, fontSize: "0.88rem", fontWeight: 600, marginBottom: "0.75rem" }}>Your entries all say the same thing. Describe what you did in each time block.</div>
                 )}
 
-                <button onClick={addEntry} style={{ background: "none", border: `1.5px dashed ${NAVY}`, borderRadius: 12, color: NAVY, padding: "0.7rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", width: "100%", marginBottom: "0.5rem", fontFamily: "inherit" }}>
+                <button onClick={addEntry} style={{ background: "none", border: `1.5px dashed ${C.navy}`, borderRadius: 12, color: C.navy, padding: "0.7rem 1rem", fontSize: "0.88rem", fontWeight: 700, cursor: "pointer", width: "100%", marginBottom: "0.5rem", fontFamily: "inherit" }}>
                   + Add Entry
                 </button>
               </>
@@ -518,46 +511,46 @@ export default function DARForm() {
 
           <SectionBar label="Sign" />
           <div style={{ padding: "0.9rem 1.25rem 0" }}>
-            <div style={{ fontSize: "0.78rem", color: TEXT, lineHeight: 1.65, marginBottom: "1rem", background: SOFT_BG, border: `1px solid ${BORDER}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
+            <div style={{ fontSize: "0.78rem", color: C.text, lineHeight: 1.65, marginBottom: "1rem", background: C.softBg, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.navy}`, borderRadius: 8, padding: "0.75rem 1rem" }}>
               By your signature, you acknowledge that the information on this DAR is a true and accurate record of your time and account activity today.
             </div>
-            <label id="sign-box" style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer", border: `1.5px solid ${triedSubmit && !signed ? "#b91c1c" : signed ? NAVY : BORDER}`, background: signed ? "#eaf1fb" : WHITE, borderRadius: 12, padding: "1rem", marginBottom: "1rem" }}>
-              <input type="checkbox" checked={signed} disabled={!form.officerName.trim()} onChange={(e) => setForm((f) => ({ ...f, signature: e.target.checked ? f.officerName.trim() : "" }))} style={{ width: 24, height: 24, marginTop: 1, accentColor: NAVY, flexShrink: 0 }} />
-              <span style={{ fontSize: "0.95rem", color: TEXT, lineHeight: 1.5 }}>
-                {form.officerName.trim() ? <>Sign as <strong>{form.officerName.trim()}</strong></> : <span style={{ color: MUTED }}>Enter your name at the top to sign</span>}
-                {signed && <span style={{ display: "block", marginTop: 4, color: MUTED, fontSize: "0.85rem" }}>Signed: <em style={{ fontFamily: "Georgia, serif", color: TEXT }}>{form.signature}</em></span>}
+            <label id="sign-box" style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: "pointer", border: `1.5px solid ${triedSubmit && !signed ? C.red : signed ? C.navy : C.border}`, background: signed ? C.navyTint : C.white, borderRadius: 12, padding: "1rem", marginBottom: "1rem" }}>
+              <input type="checkbox" checked={signed} disabled={!form.officerName.trim()} onChange={(e) => setForm((f) => ({ ...f, signature: e.target.checked ? f.officerName.trim() : "" }))} style={{ width: 24, height: 24, marginTop: 1, accentColor: C.navy, flexShrink: 0 }} />
+              <span style={{ fontSize: "0.95rem", color: C.text, lineHeight: 1.5 }}>
+                {form.officerName.trim() ? <>Sign as <strong>{form.officerName.trim()}</strong></> : <span style={{ color: C.muted }}>Enter your name at the top to sign</span>}
+                {signed && <span style={{ display: "block", marginTop: 4, color: C.muted, fontSize: "0.85rem" }}>Signed: <em style={{ fontFamily: "Georgia, serif", color: C.text }}>{form.signature}</em></span>}
               </span>
             </label>
             {error && (
-              <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
+              <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: C.red, marginBottom: "1rem" }}>
                 {error}
               </div>
             )}
           </div>
 
-          <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 1.25rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
+          <div style={{ borderTop: `1px solid ${C.border}`, marginTop: "2rem", padding: "0.85rem 1.25rem 0", fontSize: "0.72rem", color: C.muted, textAlign: "center" }}>
             Allied Universal Security Services &nbsp;·&nbsp; Washington University &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes.
           </div>
         </div>
 
-        <div style={{ position: "sticky", bottom: 0, background: "rgba(255,255,255,0.97)", borderTop: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom))", backdropFilter: "blur(6px)", zIndex: 5 }}>
+        <div style={{ position: "sticky", bottom: 0, background: "rgba(255,255,255,0.97)", borderTop: `1px solid ${C.border}`, padding: "0.75rem 1.25rem calc(0.75rem + env(safe-area-inset-bottom))", backdropFilter: "blur(6px)", zIndex: 5 }}>
           {shiftReady && (
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.5rem" }}>
               <div style={{ flex: 1, height: 6, background: "#e5eaf1", borderRadius: 99, overflow: "hidden" }}>
-                <div style={{ width: `${Math.min(100, (doneEntries / MIN_ENTRIES) * 100)}%`, height: "100%", background: doneEntries >= MIN_ENTRIES ? GREEN : NAVY, transition: "width 0.2s" }} />
+                <div style={{ width: `${Math.min(100, (doneEntries / MIN_ENTRIES) * 100)}%`, height: "100%", background: doneEntries >= MIN_ENTRIES ? C.green : C.navy, transition: "width 0.2s" }} />
               </div>
-              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: doneEntries >= MIN_ENTRIES ? GREEN : MUTED, whiteSpace: "nowrap" }}>
+              <span style={{ fontSize: "0.82rem", fontWeight: 700, color: doneEntries >= MIN_ENTRIES ? C.green : C.muted, whiteSpace: "nowrap" }}>
                 {Math.min(doneEntries, entries.length)} of {Math.max(MIN_ENTRIES, entries.length)} entries done
               </span>
             </div>
           )}
           {!required && triedSubmit && (
-            <div style={{ fontSize: "0.82rem", color: "#b91c1c", fontWeight: 600, textAlign: "center", lineHeight: 1.4, marginBottom: "0.5rem" }}>Still needed: {missing.join(", ")}</div>
+            <div style={{ fontSize: "0.82rem", color: C.red, fontWeight: 600, textAlign: "center", lineHeight: 1.4, marginBottom: "0.5rem" }}>Still needed: {missing.join(", ")}</div>
           )}
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            style={{ width: "100%", minHeight: 52, background: submitting ? "#94a3b8" : required ? GREEN : NAVY, color: WHITE, border: "none", borderRadius: 12, fontSize: "1.02rem", fontWeight: 700, fontFamily: "inherit", cursor: submitting ? "not-allowed" : "pointer" }}
+            style={{ width: "100%", minHeight: 52, background: submitting ? C.faint : required ? C.green : C.navy, color: C.white, border: "none", borderRadius: 12, fontSize: "1.02rem", fontWeight: 700, fontFamily: "inherit", cursor: submitting ? "not-allowed" : "pointer" }}
           >
             {submitting ? "Submitting…" : "Submit DAR"}
           </button>
@@ -569,7 +562,7 @@ export default function DARForm() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.75rem 1.25rem 0", color: TEXT, fontSize: "1.15rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.75rem 1.25rem 0", color: C.text, fontSize: "1.15rem", fontWeight: 700 }}>
       {label}
     </div>
   );
@@ -577,12 +570,11 @@ function SectionBar({ label }: { label: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: C.slate, marginBottom: 6 }}>
       {children}
     </div>
   );
 }
-
 
 function Field({ label, value, onChange, placeholder, type = "text", required: req }: {
   label: string; value: string;
@@ -591,7 +583,7 @@ function Field({ label, value, onChange, placeholder, type = "text", required: r
 }) {
   return (
     <div style={{ marginBottom: "1rem" }}>
-      <Label>{label}{req && <span style={{ color: "#b3261e", marginLeft: 2 }}>*</span>}</Label>
+      <Label>{label}{req && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}</Label>
       <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={inputStyle} />
     </div>
   );
@@ -607,32 +599,22 @@ function Row({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 const chipRow: React.CSSProperties = { display: "flex", flexWrap: "wrap", gap: "0.4rem" };
 const chip: React.CSSProperties = {
-  border: `1.5px solid ${BORDER}`, background: WHITE, color: TEXT, borderRadius: 999,
+  border: `1.5px solid ${C.border}`, background: C.white, color: C.text, borderRadius: 999,
   padding: "0.4rem 0.75rem", fontSize: "0.84rem", fontWeight: 600, fontFamily: "inherit",
   cursor: "pointer", textAlign: "left", lineHeight: 1.3, minHeight: 36,
 };
 const timeBox: React.CSSProperties = {
   width: 68, padding: "0.4rem 0.3rem", border: "1px solid #d1d5db", borderRadius: 8,
-  fontSize: "0.95rem", textAlign: "center", fontFamily: "inherit", background: WHITE, color: TEXT,
+  fontSize: "0.95rem", textAlign: "center", fontFamily: "inherit", background: C.white, color: C.text,
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
   border: `1px solid #d1d5db`, borderRadius: 12, fontSize: "1rem",
-  color: TEXT, background: "#ffffff", outline: "none", fontFamily: "inherit",
+  color: C.text, background: C.white, outline: "none", fontFamily: "inherit",
 };
-
-function btnStyle(bg: string): React.CSSProperties {
-  return {
-    background: bg, color: WHITE, border: "none", borderRadius: 12,
-    padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700,
-    cursor: "pointer", fontFamily: "inherit",
-    width: "100%",
-  };
-}
 
 function btnOutlineStyle(color: string): React.CSSProperties {
   return {

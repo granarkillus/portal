@@ -7,6 +7,9 @@
 
 import { useEffect, useState } from "react";
 import { discardOutboxItem, flushOutbox, getOutbox, KIND_LABEL, onOutboxChange, OutboxItem } from "@/lib/outbox";
+import { C } from "@/lib/theme";
+import { fmtStamp } from "@/lib/format";
+import Icon from "@/components/icon";
 
 const RETRY_MS = 20000;
 
@@ -60,7 +63,7 @@ export default function OfflineSupport() {
 
   if (sentNote) {
     return (
-      <div role="status" style={{ ...bar, background: "#15803d" }}>
+      <div role="status" style={{ ...bar, background: C.green }}>
         <span style={{ flex: 1 }}>{sentNote}</span>
         <button type="button" onClick={() => setSentNote("")} style={closeBtn} aria-label="Dismiss">✕</button>
       </div>
@@ -70,8 +73,8 @@ export default function OfflineSupport() {
   if (items.length === 0) {
     if (online) return null;
     return (
-      <div role="status" style={{ ...bar, background: "#334155" }}>
-        <span style={{ fontSize: "1.1rem" }}>📶</span>
+      <div role="status" style={{ ...bar, background: C.slate }}>
+        <Icon name="wifiOff" size={18} />
         <span style={{ flex: 1 }}>No signal. You can keep filling in forms; they&apos;ll send when you&apos;re back online.</span>
       </div>
     );
@@ -81,9 +84,9 @@ export default function OfflineSupport() {
   const waiting = items.length - failed.length;
 
   return (
-    <div role="status" style={{ ...bar, background: failed.length ? "#b91c1c" : "#9a3412", flexDirection: "column", alignItems: "stretch" }}>
+    <div role="status" style={{ ...bar, background: failed.length ? C.red : C.orange, flexDirection: "column", alignItems: "stretch" }}>
       <button type="button" onClick={() => setOpen((o) => !o)} style={{ all: "unset", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.6rem" }}>
-        <span style={{ fontSize: "1.1rem" }}>{failed.length ? "⚠️" : "⏳"}</span>
+        <Icon name={failed.length ? "alert" : "clock"} size={18} />
         <span style={{ flex: 1 }}>
           {waiting > 0 && <>{waiting === 1 ? "1 form is" : `${waiting} forms are`} waiting for signal. {online ? "Sending…" : "It'll send automatically."}</>}
           {waiting > 0 && failed.length > 0 && " "}
@@ -97,11 +100,11 @@ export default function OfflineSupport() {
             <div key={i.id} style={{ background: "rgba(255,255,255,0.14)", borderRadius: 10, padding: "0.55rem 0.75rem", fontSize: "0.88rem" }}>
               <div style={{ fontWeight: 700 }}>{i.label}</div>
               <div style={{ opacity: 0.85 }}>
-                Saved {new Date(i.savedAt).toLocaleString("en-US", { month: "numeric", day: "numeric", hour: "numeric", minute: "2-digit" })}
+                Saved {fmtStamp(new Date(i.savedAt).toISOString())}
                 {i.error ? " · Couldn't be sent. Please fill it in again or contact your supervisor." : " · Waiting to send"}
               </div>
               {i.error && (
-                <button type="button" onClick={() => discardOutboxItem(i.id)} style={{ marginTop: 6, background: "#ffffff", color: "#b91c1c", border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", fontWeight: 700, fontSize: "0.82rem", fontFamily: "inherit", cursor: "pointer", minHeight: 0 }}>
+                <button type="button" onClick={() => discardOutboxItem(i.id)} style={{ marginTop: 6, background: C.white, color: C.red, border: "none", borderRadius: 8, padding: "0.35rem 0.75rem", fontWeight: 700, fontSize: "0.82rem", fontFamily: "inherit", cursor: "pointer", minHeight: 0 }}>
                   Remove
                 </button>
               )}
@@ -118,8 +121,8 @@ export default function OfflineSupport() {
 
 const bar: React.CSSProperties = {
   position: "sticky", top: 0, zIndex: 1000, display: "flex", alignItems: "center", gap: "0.6rem",
-  color: "#ffffff", padding: "0.7rem 1rem", fontSize: "0.92rem", fontWeight: 600, lineHeight: 1.4,
+  color: C.white, padding: "0.7rem 1rem", fontSize: "0.92rem", fontWeight: 600, lineHeight: 1.4,
   fontFamily: "var(--font-sans, system-ui, sans-serif)", boxShadow: "0 2px 10px rgba(15,23,42,0.18)",
 };
 
-const closeBtn: React.CSSProperties = { background: "none", border: "none", color: "#ffffff", fontSize: "1rem", cursor: "pointer", padding: "0 0.25rem", minHeight: 0 };
+const closeBtn: React.CSSProperties = { background: "none", border: "none", color: C.white, fontSize: "1rem", cursor: "pointer", padding: "0 0.25rem", minHeight: 0 };

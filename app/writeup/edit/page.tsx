@@ -4,16 +4,9 @@ import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import SupervisorHeader, { headerButton } from "@/components/supervisor-header";
 import WriteUpFields, { WriteUpFormState, blankWriteUp, writeUpMissing } from "@/components/writeup-fields";
-import { C as UI, StickyBar, PrimaryButton, MissingNote } from "@/components/ui";
-
-const NAVY = "#1a4480";
-const DARK = "#243b5e";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
+import { C, StickyBar, PrimaryButton, MissingNote } from "@/components/ui";
+import { btnStyle } from "@/lib/theme";
+import { PageSkeleton } from "@/components/feedback";
 
 interface WorkHistoryRow {
   type: string;
@@ -209,20 +202,14 @@ export default function EditWriteUpForm() {
     setSaving(false);
   };
 
-  if (loading) {
-    return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-        <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading record...</div>
-      </div>
-    );
-  }
+  if (loading) return <PageSkeleton />;
 
   if (notFound) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-        <div style={{ textAlign: "center", color: MUTED }}>
-          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Record Not Found</div>
-          <a href="/writeup/records" style={{ color: NAVY, fontSize: "0.85rem" }}>← Back to Records</a>
+      <div style={{ minHeight: "100vh", background: C.softBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
+        <div style={{ textAlign: "center", color: C.muted }}>
+          <div style={{ fontSize: "1.1rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>Record Not Found</div>
+          <a href="/writeup/records" style={{ color: C.navy, fontSize: "0.85rem" }}>← Back to Records</a>
         </div>
       </div>
     );
@@ -230,15 +217,15 @@ export default function EditWriteUpForm() {
 
   if (locked) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-        <div style={{ maxWidth: 480, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
+      <div style={{ minHeight: "100vh", background: C.softBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+        <div style={{ maxWidth: 480, width: "100%", background: C.white, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
           <SupervisorHeader title="Edit write-up" subtitle="Coaching – Counseling – Disciplinary Notice" active="writeups" actions={<a href={`/writeup/view?id=${recordId}`} style={headerButton()}>← Back to notice</a>} />
           <div style={{ padding: "2.5rem 1.25rem" }}>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>This Record Can No Longer Be Edited</div>
-            <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
+            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>This Record Can No Longer Be Edited</div>
+            <div style={{ color: C.muted, fontSize: "0.85rem", marginBottom: "1.5rem", lineHeight: 1.6 }}>
               The employee has already responded to this notice, so it's locked to preserve an accurate record of what they acknowledged. If a correction is needed now, file a new write-up referencing this one.
             </div>
-            <a href={`/writeup/view?id=${recordId}`} style={{ ...btnStyle(NAVY), display: "block", textDecoration: "none", textAlign: "center" as const }}>
+            <a href={`/writeup/view?id=${recordId}`} style={{ ...btnStyle(C.navy), display: "block", textDecoration: "none", textAlign: "center" as const }}>
               View Record
             </a>
           </div>
@@ -249,20 +236,20 @@ export default function EditWriteUpForm() {
 
   if (saved) {
     return (
-      <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem 0.75rem 2rem" }}>
-        <div style={{ maxWidth: 480, width: "100%", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
+      <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem 0.75rem 2rem" }}>
+        <div style={{ maxWidth: 480, width: "100%", background: C.white, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden", textAlign: "center" }}>
           <SupervisorHeader title="Edit write-up" subtitle="Coaching – Counseling – Disciplinary Notice" active="writeups" actions={<a href={`/writeup/view?id=${recordId}`} style={headerButton()}>← Back to notice</a>} />
           <div style={{ padding: "2.5rem 1.25rem" }}>
-            <div style={{ width: 56, height: 56, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: C.greenTint, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
             </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Changes Saved</div>
-            <div style={{ color: MUTED, fontSize: "0.85rem", marginBottom: "1.5rem" }}>
+            <div style={{ fontSize: "1.1rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>Changes Saved</div>
+            <div style={{ color: C.muted, fontSize: "0.85rem", marginBottom: "1.5rem" }}>
               The disciplinary notice for {form.employeeName} has been updated. The respond link sent to the employee is unchanged.
             </div>
-            <a href={`/writeup/view?id=${recordId}`} style={{ ...btnStyle(NAVY), display: "block", textDecoration: "none", textAlign: "center" as const }}>
+            <a href={`/writeup/view?id=${recordId}`} style={{ ...btnStyle(C.navy), display: "block", textDecoration: "none", textAlign: "center" as const }}>
               View Record
             </a>
           </div>
@@ -272,20 +259,20 @@ export default function EditWriteUpForm() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: UI.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 640, margin: "0 auto", background: UI.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 640, margin: "0 auto", background: C.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "clip" }}>
         <SupervisorHeader title="Edit write-up" subtitle="Coaching – Counseling – Disciplinary Notice" active="writeups" actions={<a href={`/writeup/view?id=${recordId}`} style={headerButton()}>← Back to notice</a>} />
         <div style={{ padding: "0.25rem 1.25rem 1.5rem" }}>
-          <div style={{ marginTop: "1.25rem", background: "#fff7ed", border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.9rem", color: "#9a3412", lineHeight: 1.5 }}>
+          <div style={{ marginTop: "1.25rem", background: C.orangeTint, border: "1px solid #fdba74", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.9rem", color: C.orange, lineHeight: 1.5 }}>
             Editing this updates what {form.employeeName || "the officer"} will see and sign when they open their link. The link itself doesn&apos;t change.
           </div>
           <WriteUpFields form={form} setForm={setForm} workHistory={workHistory} setWorkHistory={setWorkHistory} showErrors={triedSubmit} />
         </div>
         <StickyBar>
           {triedSubmit && <MissingNote items={Array.from(new Set(missing.map((m) => m.msg)))} />}
-          {error && <div style={{ fontSize: "0.88rem", color: UI.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>{error}</div>}
+          {error && <div style={{ fontSize: "0.88rem", color: C.red, fontWeight: 600, marginBottom: "0.6rem", textAlign: "center" }}>{error}</div>}
           <div style={{ display: "flex", gap: "0.6rem" }}>
-            <a href={`/writeup/view?id=${recordId}`} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1.1rem", border: `1.5px solid ${UI.border}`, borderRadius: 12, color: UI.muted, fontWeight: 700, textDecoration: "none" }}>Cancel</a>
+            <a href={`/writeup/view?id=${recordId}`} style={{ flex: "0 0 auto", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 1.1rem", border: `1.5px solid ${C.border}`, borderRadius: 12, color: C.muted, fontWeight: 700, textDecoration: "none" }}>Cancel</a>
             <div style={{ flex: 1 }}><PrimaryButton onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save changes"}</PrimaryButton></div>
           </div>
         </StickyBar>
@@ -296,7 +283,7 @@ export default function EditWriteUpForm() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.5rem 1.25rem 0", color: "#0f172a", fontSize: "1.1rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.5rem 1.25rem 0", color: C.text, fontSize: "1.1rem", fontWeight: 700 }}>
       {label}
     </div>
   );
@@ -304,7 +291,7 @@ function SectionBar({ label }: { label: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: C.slate, marginBottom: 6 }}>
       {children}
     </div>
   );
@@ -317,7 +304,7 @@ function Field({ label, value, onChange, placeholder, type = "text", required: r
 }) {
   return (
     <div style={{ marginBottom: "1rem" }}>
-      <Label>{label}{req && <span style={{ color: "#b3261e", marginLeft: 2 }}>*</span>}</Label>
+      <Label>{label}{req && <span style={{ color: C.red, marginLeft: 2 }}>*</span>}</Label>
       <input type={type} value={value} onChange={onChange} placeholder={placeholder} style={inputStyle} />
     </div>
   );
@@ -333,8 +320,8 @@ function Row({ children }: { children: React.ReactNode }) {
 
 function CheckboxItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: "#1a1a2e", fontWeight: checked ? 600 : 400, userSelect: "none", marginBottom: "0.25rem" }}>
-      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? "#1f4e79" : "#d1d5db"}`, borderRadius: 2, background: checked ? "#1f4e79" : "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
+    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: C.text, fontWeight: checked ? 600 : 400, userSelect: "none", marginBottom: "0.25rem" }}>
+      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? "#1f4e79" : "#d1d5db"}`, borderRadius: 2, background: checked ? "#1f4e79" : C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
         {checked && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </div>
       <span onClick={onChange}>{label}</span>
@@ -345,15 +332,12 @@ function CheckboxItem({ label, checked, onChange }: { label: string; checked: bo
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
   border: "1px solid #d1d5db", borderRadius: 12, fontSize: "1rem",
-  color: "#1a1a2e", background: "#ffffff", outline: "none", fontFamily: "inherit",
+  color: C.text, background: C.white, outline: "none", fontFamily: "inherit",
 };
 
 const inlineInputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "4px 6px",
   border: "1px solid #e5e7eb", borderRadius: 8, fontSize: "0.82rem",
-  color: "#1a1a2e", background: "#fff", outline: "none", fontFamily: "inherit",
+  color: C.text, background: C.white, outline: "none", fontFamily: "inherit",
 };
 
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
-}

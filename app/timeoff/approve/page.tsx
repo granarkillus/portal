@@ -4,15 +4,9 @@ import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildTimeOffFormDocument, TimeOffRequest } from "../requests/timeoff-form-template";
 import SupervisorHeader, { StatStrip, headerButton } from "@/components/supervisor-header";
-
-const NAVY = "#1a4480";
-const DARK = "#243b5e";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const GREEN = "#15803d";
+import { C, btnStyle } from "@/lib/theme";
+import { fmtDateFull, fmtStamp } from "@/lib/format";
+import { PageSkeleton, toast } from "@/components/feedback";
 
 // Decision values:
 // "approved_payout"       → Approved — With Payout
@@ -41,12 +35,6 @@ export default function ApprovePage() {
   const isRejection = ["not_approved", "not_approved_paper"].includes(decision);
   const isPaper = ["approved_paper", "not_approved_paper"].includes(decision);
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "";
-    const d = iso.split("T")[0];
-    const [y, m, day] = d.split("-");
-    return `${m}/${day}/${y}`;
-  };
 
   const decisionLabel = (d: string) => {
     if (d === "approved_payout") return "Time Off Approved — With Payout";
@@ -126,6 +114,7 @@ export default function ApprovePage() {
       const now = new Date().toISOString();
       getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", request.id).then(() => {});
       setRequest((r) => (r ? { ...r, printed_at: now } : r));
+      toast("Marked as printed");
     }
 
     const merged: TimeOffRequest = {
@@ -148,41 +137,37 @@ export default function ApprovePage() {
     }
   };
 
-  if (loading) return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-      <div style={{ color: MUTED }}>Loading request...</div>
-    </div>
-  );
+  if (loading) return <PageSkeleton />;
 
   if (notFound) return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
-      <div style={{ textAlign: "center" }}><div style={{ fontSize: "1.1rem", fontWeight: 700, color: TEXT, marginBottom: 8 }}>Request Not Found</div></div>
+    <div style={{ minHeight: "100vh", background: C.softBg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
+      <div style={{ textAlign: "center" }}><div style={{ fontSize: "1.1rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>Request Not Found</div></div>
     </div>
   );
 
   const required = decision && managerSignature && managerDate;
 
   const decisions = [
-    { val: "approved_payout", label: "Time Off Approved — With Payout", color: GREEN, desc: "Request granted, vacation hours paid out" },
-    { val: "approved_no_payout", label: "Time Off Approved — Without Payout", color: NAVY, desc: "Request granted, no vacation hours used" },
-    { val: "not_approved", label: "Time Off Not Approved", color: "#b91c1c", desc: "Request denied — officer should use call-off form if absent" },
+    { val: "approved_payout", label: "Time Off Approved — With Payout", color: C.green, desc: "Request granted, vacation hours paid out" },
+    { val: "approved_no_payout", label: "Time Off Approved — Without Payout", color: C.navy, desc: "Request granted, no vacation hours used" },
+    { val: "not_approved", label: "Time Off Not Approved", color: C.red, desc: "Request denied — officer should use call-off form if absent" },
   ];
 
   const paperDecisions = [
-    { val: "approved_paper", label: "Approved on Paper", color: GREEN, desc: "Manager signed and approved the physical form — record only, no PDF generated" },
-    { val: "not_approved_paper", label: "Denied on Paper", color: "#b91c1c", desc: "Manager signed and denied the physical form — record only, no PDF generated" },
+    { val: "approved_paper", label: "Approved on Paper", color: C.green, desc: "Manager signed and approved the physical form — record only, no PDF generated" },
+    { val: "not_approved_paper", label: "Denied on Paper", color: C.red, desc: "Manager signed and denied the physical form — record only, no PDF generated" },
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", background: WHITE, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", background: C.white, borderRadius: 12, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
         <SupervisorHeader title="Time-off request" active="timeoff" actions={<><a href="/timeoff/requests" style={headerButton()}>← All requests</a><button type="button" onClick={generatePDF} style={headerButton(true)}>Print</button></>} />
 
         {request && (
           <div style={{ padding: "0 0 2rem" }}>
 
-            <div style={{ background: SOFT_BG, borderBottom: `1px solid ${BORDER}`, padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
+            <div style={{ background: C.softBg, borderBottom: `1px solid ${C.border}`, padding: "0.75rem 1.25rem", display: "flex", flexWrap: "wrap", gap: "0.4rem 2rem", alignItems: "center" }}>
               {[
                 ["Employee", request.officer_name],
                 ["Emp #", request.employee_number],
@@ -191,19 +176,19 @@ export default function ApprovePage() {
                 ["Type", request.absence_type],
                 ["Use vacation", request.use_vacation == null ? "" : `${request.use_vacation ? "Yes" : "No"}${request.vacation_initials ? ` (${request.vacation_initials})` : ""}`],
                 ["Dates", request.dates_requested],
-                ["Submitted", formatDate(request.submitted_at)],
+                ["Submitted", fmtStamp(request.submitted_at)],
               ].map(([label, val]) => val ? (
                 <div key={label} style={{ fontSize: "0.78rem" }}>
-                  <span style={{ fontWeight: 600, fontSize: "0.82rem", color: MUTED }}>{label}: </span>
-                  <span style={{ color: TEXT, fontWeight: label === "Type" || label === "Dates" ? 600 : 400 }}>{val}</span>
+                  <span style={{ fontWeight: 600, fontSize: "0.82rem", color: C.muted }}>{label}: </span>
+                  <span style={{ color: C.text, fontWeight: label === "Type" || label === "Dates" ? 600 : 400 }}>{val}</span>
                 </div>
               ) : null)}
               <div style={{ marginLeft: "auto" }}>
                 <span style={{
                   fontSize: "0.68rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999,
-                  background: request.status === "approved" ? "#e8f5e9" : request.status === "rejected" ? "#fef2f2" : "#fff3cd",
-                  color: request.status === "approved" ? GREEN : request.status === "rejected" ? "#b91c1c" : "#92400e",
-                  border: `1px solid ${request.status === "approved" ? "#a5d6a7" : request.status === "rejected" ? "#fca5a5" : "#fcd34d"}`,
+                  background: request.status === "approved" ? C.greenTint : request.status === "rejected" ? C.redTint : C.amberTint,
+                  color: request.status === "approved" ? C.green : request.status === "rejected" ? C.red : C.amber,
+                  border: `1px solid ${request.status === "approved" ? C.greenLine : request.status === "rejected" ? C.redLine : C.amberLine}`,
                   textTransform: "uppercase", letterSpacing: "0.05em",
                 }}>
                   {request.status}
@@ -216,17 +201,17 @@ export default function ApprovePage() {
               {request.reason && (
                 <div style={{ marginBottom: "0.5rem" }}>
                   <Label>Reason For Absence</Label>
-                  <div style={{ fontSize: "0.88rem", color: TEXT, padding: "0.5rem 0.75rem", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12 }}>{request.reason}</div>
+                  <div style={{ fontSize: "0.88rem", color: C.text, padding: "0.5rem 0.75rem", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12 }}>{request.reason}</div>
                 </div>
               )}
               <div style={{ display: "flex", gap: "1rem" }}>
                 <div style={{ flex: 1 }}>
                   <Label>Employee Signature</Label>
-                  <div style={{ fontSize: "0.88rem", color: TEXT, padding: "0.5rem 0.75rem", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12 }}>{request.employee_signature}</div>
+                  <div style={{ fontSize: "0.88rem", color: C.text, padding: "0.5rem 0.75rem", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12 }}>{request.employee_signature}</div>
                 </div>
                 <div style={{ width: 160 }}>
                   <Label>Date</Label>
-                  <div style={{ fontSize: "0.88rem", color: TEXT, padding: "0.5rem 0.75rem", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 12 }}>{formatDate(request.employee_date)}</div>
+                  <div style={{ fontSize: "0.88rem", color: C.text, padding: "0.5rem 0.75rem", background: C.white, border: `1px solid ${C.border}`, borderRadius: 12 }}>{fmtDateFull(request.employee_date)}</div>
                 </div>
               </div>
             </div>
@@ -240,45 +225,45 @@ export default function ApprovePage() {
               </div>
 
               {/* Digital decisions */}
-              <Label>Decision <span style={{ color: "#b3261e" }}>*</span></Label>
+              <Label>Decision <span style={{ color: C.red }}>*</span></Label>
               <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", margin: "0.5rem 0 1rem" }}>
                 {decisions.map(({ val, label, color, desc }) => (
                   <label key={val} onClick={() => !saved && setDecision(decision === val ? "" : val)} style={{
                     display: "flex", alignItems: "flex-start", gap: 10, cursor: saved ? "default" : "pointer",
-                    background: decision === val ? (val === "not_approved" ? "#fff5f5" : "#f0f7f0") : SOFT_BG,
-                    border: `1.5px solid ${decision === val ? color : BORDER}`,
+                    background: decision === val ? (val === "not_approved" ? "#fff5f5" : "#f0f7f0") : C.softBg,
+                    border: `1.5px solid ${decision === val ? color : C.border}`,
                     borderRadius: 12, padding: "0.7rem 1rem", userSelect: "none", transition: "all 0.15s",
                   }}>
-                    <div style={{ width: 18, height: 18, border: `2px solid ${decision === val ? color : BORDER}`, borderRadius: 2, background: decision === val ? color : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1, transition: "all 0.15s" }}>
+                    <div style={{ width: 18, height: 18, border: `2px solid ${decision === val ? color : C.border}`, borderRadius: 2, background: decision === val ? color : C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1, transition: "all 0.15s" }}>
                       {decision === val && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                     </div>
                     <div>
-                      <div style={{ fontSize: "0.88rem", fontWeight: decision === val ? 700 : 500, color: decision === val ? color : TEXT }}>{label}</div>
-                      <div style={{ fontSize: "0.72rem", color: MUTED, marginTop: 2 }}>{desc}</div>
+                      <div style={{ fontSize: "0.88rem", fontWeight: decision === val ? 700 : 500, color: decision === val ? color : C.text }}>{label}</div>
+                      <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 2 }}>{desc}</div>
                     </div>
                   </label>
                 ))}
               </div>
 
               {/* Paper signature options */}
-              <div style={{ borderTop: `1px solid ${BORDER}`, paddingTop: "1rem", marginBottom: "1rem" }}>
-                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: MUTED, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>
+              <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: "1rem", marginBottom: "1rem" }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "0.5rem" }}>
                   Or — Manager signed the physical paper form
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
                   {paperDecisions.map(({ val, label, color, desc }) => (
                     <label key={val} onClick={() => !saved && setDecision(decision === val ? "" : val)} style={{
                       display: "flex", alignItems: "flex-start", gap: 10, cursor: saved ? "default" : "pointer",
-                      background: decision === val ? (val === "not_approved_paper" ? "#fff5f5" : "#f0f7f0") : SOFT_BG,
-                      border: `1.5px solid ${decision === val ? color : BORDER}`,
+                      background: decision === val ? (val === "not_approved_paper" ? "#fff5f5" : "#f0f7f0") : C.softBg,
+                      border: `1.5px solid ${decision === val ? color : C.border}`,
                       borderRadius: 12, padding: "0.7rem 1rem", userSelect: "none", transition: "all 0.15s",
                     }}>
-                      <div style={{ width: 18, height: 18, border: `2px solid ${decision === val ? color : BORDER}`, borderRadius: 2, background: decision === val ? color : WHITE, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1, transition: "all 0.15s" }}>
+                      <div style={{ width: 18, height: 18, border: `2px solid ${decision === val ? color : C.border}`, borderRadius: 2, background: decision === val ? color : C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1, transition: "all 0.15s" }}>
                         {decision === val && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                       </div>
                       <div>
-                        <div style={{ fontSize: "0.88rem", fontWeight: decision === val ? 700 : 500, color: decision === val ? color : TEXT }}>{label}</div>
-                        <div style={{ fontSize: "0.72rem", color: MUTED, marginTop: 2 }}>{desc}</div>
+                        <div style={{ fontSize: "0.88rem", fontWeight: decision === val ? 700 : 500, color: decision === val ? color : C.text }}>{label}</div>
+                        <div style={{ fontSize: "0.72rem", color: C.muted, marginTop: 2 }}>{desc}</div>
                       </div>
                     </label>
                   ))}
@@ -307,34 +292,34 @@ export default function ApprovePage() {
 
               <div style={{ display: "flex", gap: "1rem" }}>
                 <div style={{ flex: 1 }}>
-                  <Label>Manager Signature (type full name) <span style={{ color: "#b3261e" }}>*</span></Label>
+                  <Label>Manager Signature (type full name) <span style={{ color: C.red }}>*</span></Label>
                   <input value={managerSignature} onChange={(e) => setManagerSignature(e.target.value)} placeholder="Full legal name" style={inputStyle} disabled={saved} />
                 </div>
                 <div style={{ width: 180 }}>
-                  <Label>Date <span style={{ color: "#b3261e" }}>*</span></Label>
+                  <Label>Date <span style={{ color: C.red }}>*</span></Label>
                   <input type="date" value={managerDate} onChange={(e) => setManagerDate(e.target.value)} style={inputStyle} disabled={saved} />
                 </div>
               </div>
 
-              {error && <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>{error}</div>}
+              {error && <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.82rem", color: C.red, marginBottom: "1rem" }}>{error}</div>}
 
               {saved ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                   <div style={{
-                    background: isApproval ? "#e8f5e9" : "#fef2f2",
-                    border: `1px solid ${isApproval ? "#a5d6a7" : "#fca5a5"}`,
+                    background: isApproval ? C.greenTint : C.redTint,
+                    border: `1px solid ${isApproval ? C.greenLine : C.redLine}`,
                     borderRadius: 12, padding: "0.75rem 1rem", fontSize: "0.83rem",
-                    color: isApproval ? GREEN : "#b91c1c", fontWeight: 600, textAlign: "center"
+                    color: isApproval ? C.green : C.red, fontWeight: 600, textAlign: "center"
                   }}>
                     {isApproval ? `✓ ${decisionLabel(decision)}` : `✗ ${decisionLabel(decision)}`}
                     {isPaper ? " — recorded." : " — PDF generated."}
                   </div>
                   {!isPaper && (
-                    <button onClick={generatePDF} style={{ ...btnStyle("transparent"), color: NAVY, border: `1px solid ${NAVY}` }}>
+                    <button onClick={generatePDF} style={{ ...btnStyle("transparent"), color: C.navy, border: `1px solid ${C.navy}` }}>
                       Re-generate PDF
                     </button>
                   )}
-                  <a href="/timeoff/requests" style={{ ...btnStyle(MUTED), display: "block", textAlign: "center", textDecoration: "none" }}>
+                  <a href="/timeoff/requests" style={{ ...btnStyle(C.muted), display: "block", textAlign: "center", textDecoration: "none" }}>
                     Back to All Requests
                   </a>
                 </div>
@@ -342,7 +327,7 @@ export default function ApprovePage() {
                 <button
                   onClick={handleSave}
                   disabled={!required || saving}
-                  style={{ ...btnStyle(required && !saving ? (isRejection ? "#b91c1c" : GREEN) : "#9ca3af"), cursor: required && !saving ? "pointer" : "not-allowed" }}
+                  style={{ ...btnStyle(required && !saving ? (isRejection ? C.red : C.green) : C.faint), cursor: required && !saving ? "pointer" : "not-allowed" }}
                 >
                   {saving ? "Saving..." :
                     isPaper && isApproval ? "Mark as Approved on Paper" :
@@ -352,10 +337,10 @@ export default function ApprovePage() {
                     "Complete Review"}
                 </button>
               )}
-              {!required && !saved && <div style={{ fontSize: "0.75rem", color: MUTED, textAlign: "center", marginTop: "0.5rem" }}>Decision, manager signature, and date are required</div>}
+              {!required && !saved && <div style={{ fontSize: "0.75rem", color: C.muted, textAlign: "center", marginTop: "0.5rem" }}>Decision, manager signature, and date are required</div>}
             </div>
 
-            <div style={{ borderTop: `1px solid ${BORDER}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: MUTED, textAlign: "center" }}>
+            <div style={{ borderTop: `1px solid ${C.border}`, marginTop: "2rem", padding: "0.85rem 2rem 0", fontSize: "0.72rem", color: C.muted, textAlign: "center" }}>
               Allied Universal Security Services &nbsp;·&nbsp; Please keep all completed forms on file for audit purposes. &nbsp;·&nbsp; UPDATED 4/19
             </div>
           </div>
@@ -367,7 +352,7 @@ export default function ApprovePage() {
 
 function SectionBar({ label }: { label: string }) {
   return (
-    <div style={{ margin: "1.5rem 1.25rem 0", color: "#0f172a", fontSize: "1.1rem", fontWeight: 700 }}>
+    <div style={{ margin: "1.5rem 1.25rem 0", color: C.text, fontSize: "1.1rem", fontWeight: 700 }}>
       {label}
     </div>
   );
@@ -375,7 +360,7 @@ function SectionBar({ label }: { label: string }) {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: C.slate, marginBottom: 6 }}>
       {children}
     </div>
   );
@@ -383,8 +368,8 @@ function Label({ children }: { children: React.ReactNode }) {
 
 function CheckboxItem({ label, checked, onChange }: { label: string; checked: boolean; onChange: () => void }) {
   return (
-    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: "#1a1a2e", fontWeight: checked ? 600 : 400, userSelect: "none" }}>
-      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? "#1f4e79" : "#d1d5db"}`, borderRadius: 2, background: checked ? "#1f4e79" : "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
+    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "0.85rem", color: C.text, fontWeight: checked ? 600 : 400, userSelect: "none" }}>
+      <div onClick={onChange} style={{ width: 16, height: 16, border: `2px solid ${checked ? "#1f4e79" : "#d1d5db"}`, borderRadius: 2, background: checked ? "#1f4e79" : C.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, cursor: "pointer", transition: "all 0.15s" }}>
         {checked && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5 4,7.5 8.5,2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>}
       </div>
       <span onClick={onChange}>{label}</span>
@@ -395,10 +380,7 @@ function CheckboxItem({ label, checked, onChange }: { label: string; checked: bo
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "0.75rem 0.9rem",
   border: "1px solid #d1d5db", borderRadius: 12, fontSize: "1rem",
-  color: "#1a1a2e", background: "#ffffff", outline: "none", fontFamily: "inherit",
+  color: C.text, background: C.white, outline: "none", fontFamily: "inherit",
   marginBottom: "1rem",
 };
 
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
-}

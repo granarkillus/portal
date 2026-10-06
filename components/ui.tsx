@@ -5,17 +5,10 @@
 // tap buttons instead of tiny checkboxes, and a Submit bar that stays on screen.
 
 import { useState } from "react";
+import { C } from "@/lib/theme";
+import Icon from "@/components/icon";
 
-export const C = {
-  navy: "#1a4480",
-  softBg: "#f2f5fa",
-  white: "#ffffff",
-  muted: "#5b6474",
-  border: "#dbe2ec",
-  text: "#0f172a",
-  green: "#15803d",
-  red: "#b91c1c",
-};
+export { C };
 
 export const SUPERVISORS = ["Markham Gartley", "Shawn Furlow", "Justin Barnes"];
 
@@ -63,7 +56,7 @@ export function Section({ title, subtitle, children, id }: { title: string; subt
 }
 
 export function Label({ children }: { children: React.ReactNode }) {
-  return <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#334155", marginBottom: 8 }}>{children}</div>;
+  return <div style={{ fontSize: "0.95rem", fontWeight: 600, color: C.slate, marginBottom: 8 }}>{children}</div>;
 }
 export function Req() { return <span style={{ color: C.red }} aria-label="required"> *</span>; }
 export function Optional() { return <span style={{ color: C.muted, fontWeight: 400, fontSize: "0.85rem" }}> (optional)</span>; }
@@ -141,7 +134,7 @@ export function ChoiceField({ label, options, value, onChange, required, optiona
 export function FixedLine({ text, editing, onToggle }: { text: string; editing: boolean; onToggle: () => void }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", color: C.muted, marginBottom: "1rem" }}>
-      <span>📍 {text}</span>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Icon name="pin" size={15} />{text}</span>
       <button type="button" onClick={onToggle} style={{ background: "none", border: "none", padding: 0, minHeight: 0, color: C.navy, fontWeight: 700, textDecoration: "underline", cursor: "pointer", fontFamily: "inherit", fontSize: "0.88rem" }}>{editing ? "Done" : "Edit"}</button>
     </div>
   );
@@ -154,7 +147,7 @@ export function SignBox({ name, signed, onChange, error, id = "sign-box", statem
   const n = name.trim();
   return (
     <div id={id}>
-      <label style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: n ? "pointer" : "default", border: `1.5px solid ${error ? C.red : signed ? C.navy : C.border}`, background: signed ? "#eaf1fb" : C.white, borderRadius: 12, padding: "1rem" }}>
+      <label style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start", cursor: n ? "pointer" : "default", border: `1.5px solid ${error ? C.red : signed ? C.navy : C.border}`, background: signed ? C.navyTint : C.white, borderRadius: 12, padding: "1rem" }}>
         <input type="checkbox" checked={signed} disabled={!n} onChange={(e) => onChange(e.target.checked)} style={{ width: 24, height: 24, marginTop: 1, accentColor: C.navy, flexShrink: 0 }} />
         <span style={{ fontSize: "0.95rem", color: C.text, lineHeight: 1.5 }}>
           {statement && <span style={{ display: "block", marginBottom: 4 }}>{statement}</span>}
@@ -177,7 +170,7 @@ export function StickyBar({ children }: { children: React.ReactNode }) {
 
 export function PrimaryButton({ onClick, disabled, children, color = C.navy }: { onClick: () => void; disabled?: boolean; children: React.ReactNode; color?: string }) {
   return (
-    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "100%", minHeight: 54, background: disabled ? "#94a3b8" : color, color: C.white, border: "none", borderRadius: 12, fontSize: "1.05rem", fontWeight: 700, fontFamily: "inherit", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+    <button type="button" onClick={onClick} disabled={disabled} style={{ width: "100%", minHeight: 54, background: disabled ? C.faint : color, color: C.white, border: "none", borderRadius: 12, fontSize: "1.05rem", fontWeight: 700, fontFamily: "inherit", cursor: disabled ? "not-allowed" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
       {children}
     </button>
   );
@@ -204,10 +197,10 @@ export function DoneCard({ title, children, tone = "ok" }: { title: string; chil
           Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300 }}>™</sup>
         </div>
         <div style={{ padding: "2rem 1.5rem" }}>
-          <div style={{ width: 56, height: 56, borderRadius: "50%", background: tone === "ok" ? "#e8f5e9" : "#fff7ed", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: "1.5rem" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: tone === "ok" ? C.greenTint : C.orangeTint, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", fontSize: "1.5rem" }}>
             {tone === "ok"
-              ? <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-              : "⏳"}
+              ? <Icon name="check" size={28} color={C.greenDark} strokeWidth={2.5} />
+              : <Icon name="clock" size={28} color={C.orange} />}
           </div>
           <div style={{ fontSize: "1.2rem", fontWeight: 700, color: C.text, marginBottom: 8 }}>{title}</div>
           {children}

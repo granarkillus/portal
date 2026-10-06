@@ -3,14 +3,11 @@
 import { useState, useEffect } from "react";
 import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
+import { C } from "@/lib/theme";
+import { fmtDate, fmtTime, fmtStamp } from "@/lib/format";
+import { Skeleton } from "@/components/feedback";
 
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
-const pill: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", fontSize: "0.85rem", fontWeight: 700, color: "#0f172a", background: "#ffffff", border: "1px solid #dbe2ec", borderRadius: 999, padding: "0.4rem 0.9rem" };
+const pill: React.CSSProperties = { display: "inline-flex", alignItems: "center", gap: 6, textDecoration: "none", fontSize: "0.85rem", fontWeight: 700, color: C.text, background: C.white, border: "1px solid #dbe2ec", borderRadius: 999, padding: "0.4rem 0.9rem" };
 
 interface Stats {
   pendingTimeOff: number;
@@ -40,10 +37,6 @@ export default function Dashboard() {
   const [calloffsToday, setCalloffsToday] = useState<{ id: string; officer_name: string; post: string; shift_start: string }[]>([]);
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
 
-  const formatTime = (iso: string) => {
-    if (!iso) return "";
-    return new Date(iso).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", hour12: true });
-  };
 
   useEffect(() => {
     requireSupervisor("/supervisor").then((u) => {
@@ -87,7 +80,7 @@ export default function Dashboard() {
 
       const items: RecentItem[] = [
         ...(timeOff.data || []).map((r) => ({ id: r.id, type: "time-off", name: r.officer_name, detail: [r.absence_type, r.dates_requested].filter(Boolean).join(" · "), at: r.submitted_at, status: r.status })),
-        ...(callOffs.data || []).map((r) => ({ id: r.id, type: "calloff", name: r.officer_name, detail: [r.post, r.shift_date && new Date(`${r.shift_date}T12:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "numeric", day: "numeric" })].filter(Boolean).join(" · "), at: r.submitted_at })),
+        ...(callOffs.data || []).map((r) => ({ id: r.id, type: "calloff", name: r.officer_name, detail: [r.post, fmtDate(r.shift_date)].filter(Boolean).join(" · "), at: r.submitted_at })),
         ...(disciplinary.data || []).map((r) => ({ id: r.id, type: "disciplinary", name: r.officer_name, detail: r.infraction || r.action_type || "Write-up", at: r.submitted_at, status: r.signature ? "acknowledged" : "pending" })),
       ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 12);
 
@@ -103,43 +96,43 @@ export default function Dashboard() {
   };
 
   const typeConfig: Record<string, { label: string; color: string; bg: string; link: (id: string) => string }> = {
-    "time-off": { label: "Time off", color: NAVY, bg: "#eaf1fb", link: (id) => `/timeoff/view?id=${id}` },
-    "calloff": { label: "Call-off", color: "#92400e", bg: "#fff3cd", link: () => `/supervisor/calloffs?filter=week` },
-    "disciplinary": { label: "Write-up", color: "#b91c1c", bg: "#fef2f2", link: (id) => `/writeup/view?id=${id}` },
+    "time-off": { label: "Time off", color: C.navy, bg: C.navyTint, link: (id) => `/timeoff/view?id=${id}` },
+    "calloff": { label: "Call-off", color: C.amber, bg: C.amberTint, link: () => `/supervisor/calloffs?filter=week` },
+    "disciplinary": { label: "Write-up", color: C.red, bg: C.redTint, link: (id) => `/writeup/view?id=${id}` },
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)" }}>
 
-      <SupervisorHeader title="Dashboard" active="dashboard" right={<button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.35)", color: "#fff", borderRadius: 999, padding: "0.3rem 0.75rem", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 0, whiteSpace: "nowrap", flexShrink: 0 }}>Sign out</button>} rounded={false} />
+      <SupervisorHeader title="Dashboard" active="dashboard" right={<button onClick={handleSignOut} style={{ background: "none", border: "1px solid rgba(255,255,255,0.35)", color: C.white, borderRadius: 999, padding: "0.3rem 0.75rem", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", minHeight: 0, whiteSpace: "nowrap", flexShrink: 0 }}>Sign out</button>} rounded={false} />
 
       <div style={{ maxWidth: 1040, margin: "0 auto", padding: "1rem 0.75rem 2rem" }}>
 
         {/* Today at a glance */}
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1rem 1.1rem", marginBottom: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "1rem 1.1rem", marginBottom: "1rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", marginBottom: "0.75rem" }}>
-            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>Today</div>
-            <div style={{ fontSize: "0.85rem", color: MUTED }}>{new Date(`${todayStr}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: C.text }}>Today</div>
+            <div style={{ fontSize: "0.85rem", color: C.muted }}>{new Date(`${todayStr}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}</div>
           </div>
           <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
-            <a href="/supervisor/calendar" style={{ textDecoration: "none", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: NAVY, marginBottom: 6 }}>Off today ({loading ? "…" : offToday.length}) ›</div>
-              {loading ? <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading…</div> : offToday.length === 0 ? (
-                <div style={{ color: MUTED, fontSize: "0.88rem" }}>Nobody has time off today.</div>
+            <a href="/supervisor/calendar" style={{ textDecoration: "none", background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: C.navy, marginBottom: 6 }}>Off today ({loading ? "…" : offToday.length}) ›</div>
+              {loading ? <div style={{ color: C.muted, fontSize: "0.88rem" }}>Loading…</div> : offToday.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: "0.88rem" }}>Nobody has time off today.</div>
               ) : offToday.map((r) => (
-                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: TEXT, padding: "2px 0" }}>
-                  <span style={{ width: 8, height: 8, borderRadius: 99, background: NAVY, flexShrink: 0 }} />
+                <div key={r.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.92rem", color: C.text, padding: "2px 0" }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 99, background: C.navy, flexShrink: 0 }} />
                   {r.officer_name}
                 </div>
               ))}
             </a>
-            <a href="/supervisor/calloffs" style={{ textDecoration: "none", background: SOFT_BG, border: `1px solid ${BORDER}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
-              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#92400e", marginBottom: 6 }}>Called off today ({loading ? "…" : calloffsToday.length}) ›</div>
-              {loading ? <div style={{ color: MUTED, fontSize: "0.88rem" }}>Loading…</div> : calloffsToday.length === 0 ? (
-                <div style={{ color: MUTED, fontSize: "0.88rem" }}>No call-offs for today.</div>
+            <a href="/supervisor/calloffs" style={{ textDecoration: "none", background: C.softBg, border: `1px solid ${C.border}`, borderRadius: 12, padding: "0.8rem 0.9rem", display: "block" }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 700, color: C.amber, marginBottom: 6 }}>Called off today ({loading ? "…" : calloffsToday.length}) ›</div>
+              {loading ? <div style={{ color: C.muted, fontSize: "0.88rem" }}>Loading…</div> : calloffsToday.length === 0 ? (
+                <div style={{ color: C.muted, fontSize: "0.88rem" }}>No call-offs for today.</div>
               ) : calloffsToday.map((r) => (
-                <div key={r.id} style={{ fontSize: "0.92rem", color: TEXT, padding: "2px 0" }}>
-                  {r.officer_name} <span style={{ color: MUTED, fontSize: "0.8rem" }}>· {r.post}{r.shift_start ? ` · ${r.shift_start.replace(":", "")}` : ""}</span>
+                <div key={r.id} style={{ fontSize: "0.92rem", color: C.text, padding: "2px 0" }}>
+                  {r.officer_name} <span style={{ color: C.muted, fontSize: "0.8rem" }}>· {r.post}{r.shift_start ? ` · ${fmtTime(r.shift_start)}` : ""}</span>
                 </div>
               ))}
             </a>
@@ -149,52 +142,52 @@ export default function Dashboard() {
         {/* Pending counts */}
         <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
           {[
-            { label: "New time-off requests (not printed yet)", value: stats.pendingTimeOff, color: NAVY, link: "/timeoff/requests?filter=new" },
-            { label: "Call-offs to review", value: stats.pendingCallOffReview, color: "#92400e", link: "/supervisor/calloffs" },
-            { label: "Write-ups awaiting signature", value: stats.pendingDisciplinary, color: "#b91c1c", link: "/writeup/records" },
+            { label: "New time-off requests (not printed yet)", value: stats.pendingTimeOff, color: C.navy, link: "/timeoff/requests?filter=new" },
+            { label: "Call-offs to review", value: stats.pendingCallOffReview, color: C.amber, link: "/supervisor/calloffs" },
+            { label: "Write-ups awaiting signature", value: stats.pendingDisciplinary, color: C.red, link: "/writeup/records" },
           ].map((stat) => (
-            <a key={stat.label} href={stat.link} style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 14, padding: "0.9rem 1rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.85rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
-              <div style={{ fontSize: "1.7rem", fontWeight: 800, color: !loading && stat.value === 0 ? "#94a3b8" : stat.color, lineHeight: 1, minWidth: 28 }}>{loading ? "—" : stat.value}</div>
-              <div style={{ flex: 1, fontSize: "0.92rem", color: TEXT, fontWeight: 600, lineHeight: 1.3 }}>{stat.label}</div>
-              <div style={{ color: MUTED }}>›</div>
+            <a key={stat.label} href={stat.link} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 14, padding: "0.9rem 1rem", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.85rem", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+              <div style={{ fontSize: "1.7rem", fontWeight: 800, color: !loading && stat.value === 0 ? C.faint : stat.color, lineHeight: 1, minWidth: 28 }}>{loading ? "—" : stat.value}</div>
+              <div style={{ flex: 1, fontSize: "0.92rem", color: C.text, fontWeight: 600, lineHeight: 1.3 }}>{stat.label}</div>
+              <div style={{ color: C.muted }}>›</div>
             </a>
           ))}
         </div>
 
         {/* Shortcuts */}
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.5rem", marginBottom: "1.25rem" }}>
-          <a href="/writeup/write" style={{ ...pill, background: "#b91c1c", borderColor: "#b91c1c", color: WHITE }}>+ New write-up</a>
-          <a href="/dar/report" style={pill}>DARs <span style={{ color: MUTED, fontWeight: 600 }}>{loading ? "" : stats.darsTotal}</span></a>
-          <a href="/supervisor/calloffs?filter=unexcused" style={pill}>Unexcused call-offs <span style={{ color: MUTED, fontWeight: 600 }}>{loading ? "" : stats.unexcusedCallOffs}</span></a>
+          <a href="/writeup/write" style={{ ...pill, background: C.red, borderColor: C.red, color: C.white }}>+ New write-up</a>
+          <a href="/dar/report" style={pill}>DARs <span style={{ color: C.muted, fontWeight: 600 }}>{loading ? "" : stats.darsTotal}</span></a>
+          <a href="/supervisor/calloffs?filter=unexcused" style={pill}>Unexcused call-offs <span style={{ color: C.muted, fontWeight: 600 }}>{loading ? "" : stats.unexcusedCallOffs}</span></a>
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.35rem 0.85rem", margin: "-0.5rem 0 1.25rem", padding: "0 0.25rem" }}>
-          <span style={{ fontSize: "0.8rem", color: MUTED, fontWeight: 600 }}>Officer forms:</span>
+          <span style={{ fontSize: "0.8rem", color: C.muted, fontWeight: 600 }}>Officer forms:</span>
           {[["Time off", "/timeoff"], ["DAR", "/dar"], ["Call-off", "/calloff"], ["Write-up response", "/writeup"]].map(([label, href]) => (
-            <a key={href} href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.82rem", fontWeight: 600, color: NAVY, textDecoration: "none" }}>{label} ↗</a>
+            <a key={href} href={href} target="_blank" rel="noopener noreferrer" style={{ fontSize: "0.82rem", fontWeight: 600, color: C.navy, textDecoration: "none" }}>{label} ↗</a>
           ))}
         </div>
 
         {/* This week */}
-        <div style={{ background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
+        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.05)" }}>
           <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "0.5rem", padding: "0.9rem 1.1rem 0.6rem" }}>
-            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: TEXT }}>This week</div>
-            <div style={{ fontSize: "0.82rem", color: MUTED }}>{loading ? "" : `${stats.recentCallOffs} call-off${stats.recentCallOffs === 1 ? "" : "s"} in the last 7 days`}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 700, color: C.text }}>This week</div>
+            <div style={{ fontSize: "0.82rem", color: C.muted }}>{loading ? "" : `${stats.recentCallOffs} call-off${stats.recentCallOffs === 1 ? "" : "s"} in the last 7 days`}</div>
           </div>
           {loading ? (
-            <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.9rem" }}>Loading…</div>
+            <Skeleton rows={4} card={false} />
           ) : recent.length === 0 ? (
-            <div style={{ padding: "1.5rem", textAlign: "center", color: MUTED, fontSize: "0.9rem" }}>Nothing new in the last 7 days.</div>
+            <div style={{ padding: "1.5rem", textAlign: "center", color: C.muted, fontSize: "0.9rem" }}>Nothing new in the last 7 days.</div>
           ) : (
             recent.map((item) => {
               const config = typeConfig[item.type];
               return (
-                <a key={`${item.type}-${item.id}`} href={config.link(item.id)} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1.1rem", borderTop: `1px solid ${BORDER}`, textDecoration: "none", background: WHITE }}>
+                <a key={`${item.type}-${item.id}`} href={config.link(item.id)} style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.7rem 1.1rem", borderTop: `1px solid ${C.border}`, textDecoration: "none", background: C.white }}>
                   <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "2px 8px", borderRadius: 999, background: config.bg, color: config.color, whiteSpace: "nowrap", minWidth: 62, textAlign: "center" }}>{config.label}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: "0.92rem", color: TEXT }}>{item.name}</div>
-                    {item.detail && <div style={{ fontSize: "0.82rem", color: MUTED, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>}
+                    <div style={{ fontWeight: 700, fontSize: "0.92rem", color: C.text }}>{item.name}</div>
+                    {item.detail && <div style={{ fontSize: "0.82rem", color: C.muted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.detail}</div>}
                   </div>
-                  <div style={{ fontSize: "0.78rem", color: MUTED, whiteSpace: "nowrap" }}>{formatTime(item.at)}</div>
+                  <div style={{ fontSize: "0.78rem", color: C.muted, whiteSpace: "nowrap" }}>{fmtStamp(item.at)}</div>
                 </a>
               );
             })

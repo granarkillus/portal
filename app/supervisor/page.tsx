@@ -2,13 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getSupabase, safeNext } from "@/lib/supabase";
-
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
+import { C, btnStyle } from "@/lib/theme";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -85,31 +79,31 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem 0.75rem 2rem" }}>
-      <div style={{ maxWidth: 420, width: "100%", background: WHITE, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem 0.75rem 2rem" }}>
+      <div style={{ maxWidth: 420, width: "100%", background: C.white, borderRadius: 16, boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)", overflow: "hidden" }}>
 
         <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.25rem 1.5rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ color: "#fff", fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
             </div>
             <a href="/forms" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.85rem", textDecoration: "none", fontWeight: 600 }}>Officer forms ›</a>
           </div>
-          <div style={{ color: "#fff", fontSize: "1.45rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>{resetMode ? "Reset your password" : "Supervisor sign in"}</div>
+          <div style={{ color: C.white, fontSize: "1.45rem", fontWeight: 700, marginTop: "0.6rem", lineHeight: 1.2 }}>{resetMode ? "Reset your password" : "Supervisor sign in"}</div>
           <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "0.92rem", marginTop: 4 }}>Allied Universal · Washington University</div>
         </div>
 
         <div style={{ padding: "1.75rem 1.25rem" }}>
           {resetSent ? (
             <div style={{ textAlign: "center" }}>
-              <div style={{ width: 52, height: 52, borderRadius: "50%", background: "#e8f5e9", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
+              <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.greenTint, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2f6b3a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <div style={{ fontWeight: 700, color: TEXT, marginBottom: 8 }}>Reset email sent</div>
-              <div style={{ fontSize: "0.82rem", color: MUTED, marginBottom: "1.5rem" }}>Check your inbox for a password reset link.</div>
-              <button onClick={() => { setResetMode(false); setResetSent(false); }} style={btnStyle(NAVY)}>Back to Login</button>
+              <div style={{ fontWeight: 700, color: C.text, marginBottom: 8 }}>Reset email sent</div>
+              <div style={{ fontSize: "0.82rem", color: C.muted, marginBottom: "1.5rem" }}>Check your inbox for a password reset link.</div>
+              <button onClick={() => { setResetMode(false); setResetSent(false); }} style={btnStyle(C.navy)}>Back to Login</button>
             </div>
           ) : (
             <>
@@ -140,7 +134,7 @@ export default function LoginPage() {
               )}
 
               {error && (
-                <div style={{ background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 12, padding: "0.65rem 1rem", fontSize: "0.82rem", color: "#b91c1c", marginBottom: "1rem" }}>
+                <div style={{ background: C.redTint, border: "1px solid #fca5a5", borderRadius: 12, padding: "0.65rem 1rem", fontSize: "0.82rem", color: C.red, marginBottom: "1rem" }}>
                   {error}
                 </div>
               )}
@@ -148,14 +142,14 @@ export default function LoginPage() {
               <button
                 onClick={resetMode ? handleReset : handleLogin}
                 disabled={loading}
-                style={{ ...btnStyle(loading ? "#9ca3af" : NAVY), cursor: loading ? "not-allowed" : "pointer", marginBottom: "0.75rem" }}
+                style={{ ...btnStyle(loading ? C.faint : C.navy), cursor: loading ? "not-allowed" : "pointer", marginBottom: "0.75rem" }}
               >
                 {loading ? "Please wait..." : resetMode ? "Send Reset Email" : "Sign In"}
               </button>
 
               <button
                 onClick={() => { setResetMode(!resetMode); setError(""); }}
-                style={{ background: "none", border: "none", color: MUTED, fontSize: "0.78rem", cursor: "pointer", width: "100%", textAlign: "center", fontFamily: "inherit", textDecoration: "underline" }}
+                style={{ background: "none", border: "none", color: C.muted, fontSize: "0.78rem", cursor: "pointer", width: "100%", textAlign: "center", fontFamily: "inherit", textDecoration: "underline" }}
               >
                 {resetMode ? "Back to login" : "Forgot password?"}
               </button>
@@ -169,7 +163,7 @@ export default function LoginPage() {
 
 function Label({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: "#334155", marginBottom: 6 }}>
+    <div style={{ fontSize: "0.92rem", fontWeight: 600, color: C.slate, marginBottom: 6 }}>
       {children}
     </div>
   );
@@ -178,9 +172,6 @@ function Label({ children }: { children: React.ReactNode }) {
 const inputStyle: React.CSSProperties = {
   width: "100%", boxSizing: "border-box", padding: "0.6rem 0.75rem",
   border: "1px solid #d1d5db", borderRadius: 12, fontSize: "1rem",
-  color: "#1a1a2e", background: "#ffffff", outline: "none", fontFamily: "inherit",
+  color: C.text, background: C.white, outline: "none", fontFamily: "inherit",
 };
 
-function btnStyle(bg: string): React.CSSProperties {
-  return { background: bg, color: "#ffffff", border: "none", borderRadius: 12, padding: "0.7rem 1.75rem", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit", width: "100%" };
-}

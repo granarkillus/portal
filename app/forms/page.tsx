@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { getOfficer } from "@/lib/officer-memory";
-
-const NAVY = "#1a4480";
-const SOFT_BG = "#f2f5fa";
-const WHITE = "#ffffff";
-const MUTED = "#5b6474";
-const BORDER = "#dbe2ec";
-const TEXT = "#0f172a";
+import { C } from "@/lib/theme";
+import Icon from "@/components/icon";
 
 // The officer start screen: one big button per task, no login needed.
 const TASKS = [
@@ -18,22 +13,22 @@ const TASKS = [
     href: "/calloff",
     icon: "calloff",
     accent: "#c2410c",
-    tint: "#fff7ed",
+    tint: C.orangeTint,
   },
   {
     label: "Submit my DAR",
     description: "Enter your shift, then tap to fill in your activity.",
     href: "/dar",
     icon: "dar",
-    accent: NAVY,
-    tint: "#eaf1fb",
+    accent: C.navy,
+    tint: C.navyTint,
   },
   {
     label: "Request time off",
     description: "Vacation, sick or personal time. Two weeks' notice.",
     href: "/timeoff",
     icon: "timeoff",
-    accent: "#15803d",
+    accent: C.green,
     tint: "#ecfdf3",
   },
   {
@@ -92,17 +87,17 @@ export default function FormsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: SOFT_BG, fontFamily: "var(--font-sans)" }}>
+    <div style={{ minHeight: "100vh", background: C.softBg, fontFamily: "var(--font-sans)" }}>
       <div style={{ background: "linear-gradient(135deg, #0f2d57 0%, #1d4f91 100%)", padding: "1.5rem 1.25rem 3.5rem" }}>
         <div style={{ maxWidth: 560, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ color: WHITE, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ color: C.white, fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.06em", textTransform: "uppercase" }}>
               Allied<span style={{ fontWeight: 300 }}>Universal</span><sup style={{ fontSize: "0.5rem", fontWeight: 300, marginLeft: 1 }}>™</sup>
             </div>
             <a href="/signin" style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.88rem", textDecoration: "none", fontWeight: 600 }}>Sign in</a>
           </div>
-          <div style={{ color: WHITE, fontSize: "1.65rem", fontWeight: 700, marginTop: "1.25rem", lineHeight: 1.2 }}>
-            {firstName ? `Hi, ${firstName} 👋` : "Hi there 👋"}
+          <div style={{ color: C.white, fontSize: "1.65rem", fontWeight: 700, marginTop: "1.25rem", lineHeight: 1.2 }}>
+            {firstName ? `Hi, ${firstName}` : "Hi there"}
           </div>
           <div style={{ color: "rgba(255,255,255,0.8)", fontSize: "1rem", marginTop: 6 }}>What do you need to do?</div>
         </div>
@@ -110,8 +105,8 @@ export default function FormsPage() {
 
       <div style={{ maxWidth: 560, margin: "-2.25rem auto 0", padding: "0 1rem 2rem" }}>
         {drafts.map(([label, href]) => (
-          <a key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: "#fff7ed", border: "1.5px solid #fdba74", borderRadius: 16, padding: "0.9rem 1.1rem", marginBottom: "0.75rem", textDecoration: "none", color: "#9a3412", boxShadow: "0 10px 30px rgba(15,23,42,0.08)" }}>
-            <span style={{ fontSize: "1.3rem" }}>📝</span>
+          <a key={href} href={href} style={{ display: "flex", alignItems: "center", gap: "0.75rem", background: C.orangeTint, border: "1.5px solid #fdba74", borderRadius: 16, padding: "0.9rem 1.1rem", marginBottom: "0.75rem", textDecoration: "none", color: C.orange, boxShadow: "0 10px 30px rgba(15,23,42,0.08)" }}>
+            <Icon name="file" size={22} color={C.navy} />
             <span style={{ flex: 1 }}>
               <span style={{ display: "block", fontWeight: 700, fontSize: "1rem" }}>Continue your unfinished {label}</span>
               <span style={{ display: "block", fontSize: "0.88rem", opacity: 0.85 }}>It&apos;s saved on this phone. Pick up where you left off.</span>
@@ -126,15 +121,15 @@ export default function FormsPage() {
               href={t.href}
               style={{
                 display: "flex", alignItems: "center", gap: "1rem",
-                background: WHITE, borderRadius: 16, padding: "1.1rem 1.1rem",
-                textDecoration: "none", border: `1px solid ${BORDER}`,
+                background: C.white, borderRadius: 16, padding: "1.1rem 1.1rem",
+                textDecoration: "none", border: `1px solid ${C.border}`,
                 boxShadow: "0 10px 30px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.06)",
               }}
             >
               <span style={{ width: 56, height: 56, borderRadius: 14, background: t.tint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><TaskIcon name={t.icon} color={t.accent} /></span>
               <span style={{ flex: 1 }}>
-                <span style={{ display: "block", fontSize: "1.1rem", fontWeight: 700, color: TEXT }}>{t.label}</span>
-                <span style={{ display: "block", fontSize: "0.9rem", color: MUTED, marginTop: 3, lineHeight: 1.4 }}>{t.description}</span>
+                <span style={{ display: "block", fontSize: "1.1rem", fontWeight: 700, color: C.text }}>{t.label}</span>
+                <span style={{ display: "block", fontSize: "0.9rem", color: C.muted, marginTop: 3, lineHeight: 1.4 }}>{t.description}</span>
               </span>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={t.accent} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <polyline points="9 18 15 12 9 6" />
@@ -143,29 +138,29 @@ export default function FormsPage() {
           ))}
         </div>
 
-        <a href="/dar/my-dars" style={{ display: "block", textAlign: "center", marginTop: "1.25rem", color: NAVY, fontWeight: 600, fontSize: "0.95rem" }}>
+        <a href="/dar/my-dars" style={{ display: "block", textAlign: "center", marginTop: "1.25rem", color: C.navy, fontWeight: 600, fontSize: "0.95rem" }}>
           See the DARs I&apos;ve sent from this phone
         </a>
 
         {installHint && (
-          <div style={{ marginTop: "1.5rem", background: WHITE, border: `1px solid ${BORDER}`, borderRadius: 16, padding: "1rem 1.1rem", display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
-            <span style={{ fontSize: "1.5rem" }}>📲</span>
+          <div style={{ marginTop: "1.5rem", background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, padding: "1rem 1.1rem", display: "flex", gap: "0.85rem", alignItems: "flex-start" }}>
+            <Icon name="smartphone" size={24} color={C.navy} />
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, color: TEXT, fontSize: "0.98rem" }}>Put this on your home screen</div>
-              <div style={{ color: MUTED, fontSize: "0.9rem", marginTop: 4, lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 700, color: C.text, fontSize: "0.98rem" }}>Put this on your home screen</div>
+              <div style={{ color: C.muted, fontSize: "0.9rem", marginTop: 4, lineHeight: 1.5 }}>
                 {installHint === "ios"
                   ? <>Tap the <strong>Share</strong> button at the bottom of Safari, then <strong>Add to Home Screen</strong>.</>
                   : <>Tap the <strong>⋮ menu</strong> in Chrome, then <strong>Add to Home screen</strong> or <strong>Install app</strong>.</>}
               </div>
-              <button type="button" onClick={hideHint} style={{ background: "none", border: "none", padding: 0, minHeight: 0, marginTop: 8, color: NAVY, fontWeight: 600, fontSize: "0.88rem", fontFamily: "inherit", cursor: "pointer" }}>
+              <button type="button" onClick={hideHint} style={{ background: "none", border: "none", padding: 0, minHeight: 0, marginTop: 8, color: C.navy, fontWeight: 600, fontSize: "0.88rem", fontFamily: "inherit", cursor: "pointer" }}>
                 Got it, hide this
               </button>
             </div>
           </div>
         )}
 
-        <div style={{ textAlign: "center", marginTop: "2rem", fontSize: "0.85rem", color: MUTED, lineHeight: 1.6 }}>
-          No account needed. <a href="/signin" style={{ color: NAVY, fontWeight: 600 }}>Sign in</a> to see your history.
+        <div style={{ textAlign: "center", marginTop: "2rem", fontSize: "0.85rem", color: C.muted, lineHeight: 1.6 }}>
+          No account needed. <a href="/signin" style={{ color: C.navy, fontWeight: 600 }}>Sign in</a> to see your history.
         </div>
       </div>
     </div>
