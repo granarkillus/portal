@@ -12,7 +12,12 @@ import { Skeleton, toast } from "@/components/feedback";
 export default function RequestsPage() {
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter")) || "all");
+  const [filter, setFilter] = useState("all");
+  // Read ?filter= after mount so the highlighted chip matches the list.
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("filter");
+    if (f) setFilter(f === "printed" ? "forwarded" : f); // old links
+  }, []);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -36,7 +41,7 @@ export default function RequestsPage() {
     const matchesFilter =
       filter === "all" ||
       (filter === "new" && !r.printed_at) ||
-      (filter === "printed" && !!r.printed_at) ||
+      (filter === "forwarded" && !!r.printed_at) ||
       (filter === "upcoming" && isUpcoming(r));
     const matchesSearch =
       !search ||
@@ -46,30 +51,30 @@ export default function RequestsPage() {
     return matchesFilter && matchesSearch;
   });
 
-  // On "All", requests that haven't been printed yet sit on top under "New".
+  // On "All", requests that haven't been forwarded yet sit on top under "New".
   const ordered = filter === "all" ? [...filtered.filter((r) => !r.printed_at), ...filtered.filter((r) => r.printed_at)] : filtered;
   const groupHeading = (idx: number) => {
     if (filter !== "all") return null;
     const r = ordered[idx];
     if (idx > 0 && !!ordered[idx - 1].printed_at === !!r.printed_at) return null;
-    return r.printed_at ? "Earlier" : "New — not printed yet";
+    return r.printed_at ? "Earlier" : "New — not forwarded yet";
   };
   const newCount = requests.filter((r) => !r.printed_at).length;
   const upcomingCount = requests.filter(isUpcoming).length;
   const offToday = requests.filter((r) => r.status !== "rejected" && (r.requested_dates || []).includes(today)).length;
 
-  // In practice requests are printed and texted to Shawn rather than
-  // approved here, so "printed" is what tells a new request from a handled one.
+  // In practice requests are printed and texted to Shawn rather than approved
+  // here, so printing is what forwards a request to management (stored as printed_at).
   const markPrinted = (r: TimeOffRequest) => {
     if (r.printed_at) return;
     const now = new Date().toISOString();
     setRequests((rs) => rs.map((x) => (x.id === r.id ? { ...x, printed_at: now } : x)));
     getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
-    toast("Marked as printed");
+    toast("Forwarded to management");
   };
 
   const printedBadge = (r: TimeOffRequest) => r.printed_at
-    ? <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: C.muted, border: `1px solid ${C.border}` }}>Printed {fmtDate(r.printed_at)}</span>
+    ? <span style={{ fontSize: "0.78rem", fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: "#f1f5f9", color: C.muted, border: `1px solid ${C.border}` }}>Forwarded {fmtDate(r.printed_at)}</span>
     : <span style={{ fontSize: "0.78rem", fontWeight: 700, padding: "3px 10px", borderRadius: 999, background: C.navyTint, color: C.navy, border: "1px solid #bcd0ec" }}>New</span>;
 
   const statusBadge = (status: string) => {
@@ -110,15 +115,15 @@ export default function RequestsPage() {
 
         <SupervisorHeader title="Time-off requests" active="timeoff" />
 
-        <StatStrip items={[["New (not printed)", newCount, C.navy], ["Off today", offToday], ["Upcoming", upcomingCount], ["Total", requests.length]]} action={<a href="/supervisor/calendar" style={{ display: "inline-flex", background: C.navy, color: C.white, textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem", alignItems: "center", gap: 6 }}><Icon name="calendar" size={16} />Calendar</a>} />
+        <StatStrip items={[["New (not forwarded)", newCount, C.navy], ["Off today", offToday], ["Upcoming", upcomingCount], ["Total", requests.length]]} action={<a href="/supervisor/calendar" style={{ display: "inline-flex", background: C.navy, color: C.white, textDecoration: "none", borderRadius: 999, padding: "0.5rem 1rem", fontWeight: 700, fontSize: "0.9rem", alignItems: "center", gap: 6 }}><Icon name="calendar" size={16} />Calendar</a>} />
 
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", padding: "1rem 1.25rem", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by officer, type, or dates..."
             style={{ flex: 1, minWidth: 200, padding: "0.45rem 0.75rem", border: `1px solid ${C.border}`, borderRadius: 12, fontSize: "0.85rem", color: C.text, background: C.white, outline: "none", fontFamily: "inherit" }} />
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            {["all", "new", "upcoming", "printed"].map((f) => (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
+            {["all", "new", "upcoming", "forwarded"].map((f) => (
               <button key={f} onClick={() => setFilter(f)} style={{ padding: "0.55rem 0.9rem", borderRadius: 12, fontSize: "0.85rem", fontWeight: 700, border: `1px solid ${filter === f ? C.navy : C.border}`, background: filter === f ? C.navy : C.white, color: filter === f ? C.white : C.muted, cursor: "pointer", fontFamily: "inherit", textTransform: "capitalize" }}>
-                {f === "new" ? "New" : f === "upcoming" ? "Upcoming" : f === "printed" ? "Printed" : "All"}
+                {f === "new" ? "New" : f === "upcoming" ? "Upcoming" : f === "forwarded" ? "Forwarded" : "All"}
               </button>
             ))}
           </div>

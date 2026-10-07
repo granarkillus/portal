@@ -1,7 +1,7 @@
 "use client";
 
 // Small shared feedback pieces: gray placeholder rows while lists load, and a
-// short confirmation popup ("Marked as printed") after an action.
+// short confirmation popup ("Forwarded to management") after an action.
 
 import { useEffect, useState } from "react";
 import Icon from "@/components/icon";
