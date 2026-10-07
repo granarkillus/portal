@@ -30,7 +30,12 @@ export default function CallOffRecordsPage() {
   const [records, setRecords] = useState<CallOff[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState(() => (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("filter")) || "all");
+  const [filter, setFilter] = useState("all");
+  // Read ?filter= after mount so the highlighted chip matches the list.
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("filter");
+    if (f) setFilter(f);
+  }, []);
   const [moreFilters, setMoreFilters] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);

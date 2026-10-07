@@ -25,7 +25,7 @@ interface Row {
 
 interface Req extends Row { dates: string[]; needsCheck: boolean }
 
-// Requests are printed and handed on rather than approved here, so everyone
+// Requests are forwarded to management rather than approved here, so everyone
 // who asked for a day off shows the same way. Only a recorded denial looks
 // different (greyed out, hidden unless "Show denied" is on).
 const STATUS: Record<string, { label: string; bg: string; fg: string; border: string; dot: string }> = {
@@ -335,7 +335,7 @@ function RequestDetails({ r, onFix, onPrinted }: { r: Req; onFix: () => void; on
       const now = new Date().toISOString();
       getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", r.id).then(() => {});
       onPrinted(r.id, now);
-      toast("Marked as printed");
+      toast("Forwarded to management");
     }
   };
   return (
@@ -350,7 +350,7 @@ function RequestDetails({ r, onFix, onPrinted }: { r: Req; onFix: () => void; on
       <Detail label={r.needsCheck ? "Dates on the calendar (please check)" : "Dates on the calendar"}>
         {r.dates.length ? <DateGroups dates={r.dates} /> : <span style={{ color: C.orange }}>None yet: tap Fix dates</span>}
       </Detail>
-      <Detail label="Printed">{r.printed_at ? fmtDate(r.printed_at) : <span style={{ color: C.navy, fontWeight: 700 }}>Not yet (new)</span>}</Detail>
+      <Detail label="Forwarded to management">{r.printed_at ? fmtDate(r.printed_at) : <span style={{ color: C.navy, fontWeight: 700 }}>Not forwarded yet</span>}</Detail>
       <Detail label="Submitted">{fmtStamp(r.submitted_at)}</Detail>
       <div style={{ display: "flex", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
         <button type="button" onClick={print} style={{ ...primaryBtn, flex: "1 1 100%" }}>{r.printed_at ? "Print again" : "Print"}</button>

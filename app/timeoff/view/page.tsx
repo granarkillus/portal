@@ -5,7 +5,7 @@ import { getSupabase, requireSupervisor } from "@/lib/supabase";
 import { buildTimeOffFormDocument, TimeOffRequest } from "../requests/timeoff-form-template";
 import SupervisorHeader, { StatStrip, headerButton } from "@/components/supervisor-header";
 import { C } from "@/lib/theme";
-import { fmtDateFull, fmtStamp } from "@/lib/format";
+import { fmtDate, fmtDateFull, fmtStamp } from "@/lib/format";
 import { PageSkeleton, toast } from "@/components/feedback";
 
 export default function TimeOffViewPage() {
@@ -40,7 +40,7 @@ export default function TimeOffViewPage() {
       const now = new Date().toISOString();
       getSupabase().from("time_off_requests").update({ printed_at: now }).eq("id", request.id).then(() => {});
       setRequest((r) => (r ? { ...r, printed_at: now } : r));
-      toast("Marked as printed");
+      toast("Forwarded to management");
     }
     const html = buildTimeOffFormDocument(request);
     const win = window.open("", "_blank");
@@ -86,6 +86,7 @@ export default function TimeOffViewPage() {
                 ["Use vacation", request.use_vacation == null ? "" : `${request.use_vacation ? "Yes" : "No"}${request.vacation_initials ? ` (${request.vacation_initials})` : ""}`],
                 ["Dates", request.dates_requested],
                 ["Submitted", fmtStamp(request.submitted_at)],
+                ["Forwarded to management", request.printed_at ? fmtDate(request.printed_at) : "Not forwarded yet"],
               ].map(([label, val]) => val ? (
                 <div key={label} style={{ fontSize: "0.78rem" }}>
                   <span style={{ fontWeight: 600, fontSize: "0.82rem", color: C.muted }}>{label}: </span>

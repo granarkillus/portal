@@ -142,7 +142,7 @@ export default function Dashboard() {
         {/* Pending counts */}
         <div className="grid-3" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1rem" }}>
           {[
-            { label: "New time-off requests (not printed yet)", value: stats.pendingTimeOff, color: C.navy, link: "/timeoff/requests?filter=new" },
+            { label: "New time-off requests (not forwarded yet)", value: stats.pendingTimeOff, color: C.navy, link: "/timeoff/requests?filter=new" },
             { label: "Call-offs to review", value: stats.pendingCallOffReview, color: C.amber, link: "/supervisor/calloffs" },
             { label: "Write-ups awaiting signature", value: stats.pendingDisciplinary, color: C.red, link: "/writeup/records" },
           ].map((stat) => (
