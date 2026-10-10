@@ -25,6 +25,11 @@ function editDistance(a: string, b: string): number {
   return row[b.length];
 }
 
+// Other names an officer has used (e.g. maiden names), keyed by letters only.
+const ALIASES: Record<string, string> = {
+  tamaramarble: "Tamara Nelson",
+};
+
 /** "  almonte   criss " → "Almonte Criss" */
 export function tidyName(s: string): string {
   return s.trim().replace(/\s+/g, " ").replace(/(^|[\s-])(\S)/g, (m) => m.toUpperCase());
@@ -46,6 +51,8 @@ export function makeOfficerMatcher(roster: string[]): (typed: string) => string 
     if (p.length === 0) return tidyName(typed);
     const key = p.join("");
     const first = p[0], last = p[p.length - 1];
+
+    if (ALIASES[key]) return ALIASES[key];
 
     // Same letters, ignoring spaces, case and punctuation ("Martinezbates", "Ta’Lor nixon")
     const exact = only(offs.filter((o) => o.key === key));
