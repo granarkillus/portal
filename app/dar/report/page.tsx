@@ -7,6 +7,7 @@ import SupervisorHeader, { StatStrip } from "@/components/supervisor-header";
 import { C, btnStyle } from "@/lib/theme";
 import { fmtDate, fmtTime } from "@/lib/format";
 import Icon from "@/components/icon";
+import DarMonthly from "@/components/dar-monthly";
 
 export default function DARReport() {
   const [startDate, setStartDate] = useState("");
@@ -19,6 +20,8 @@ export default function DARReport() {
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const [error, setError] = useState("");
+  const [view, setView] = useState<"search" | "monthly">("search");
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("view") === "monthly") setView("monthly"); }, []);
 
   const handleSearch = async () => {
     if (!startDate || !endDate) return;
@@ -95,6 +98,14 @@ export default function DARReport() {
       <div style={{ maxWidth: 960, margin: "0 auto" }}>
 
         <SupervisorHeader title="DAR reports" active="dars" />
+
+        <div role="tablist" style={{ background: C.white, borderLeft: `1px solid ${C.border}`, borderRight: `1px solid ${C.border}`, padding: "0.85rem 1.25rem 0", display: "flex", gap: "0.25rem", borderBottom: `1px solid ${C.border}` }}>
+          {([["search", "Find & print DARs"], ["monthly", "Monthly totals"]] as const).map(([v, label]) => (
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} style={{ background: "none", border: "none", borderBottom: `3px solid ${view === v ? C.navy : "transparent"}`, color: view === v ? C.navy : C.muted, fontWeight: 700, fontSize: "0.92rem", padding: "0.5rem 0.75rem", fontFamily: "inherit", marginBottom: -1 }}>{label}</button>
+          ))}
+        </div>
+
+        {view === "monthly" ? <DarMonthly /> : (<>
 
         <div style={{ background: C.white, border: `1px solid ${C.border}`, borderTop: "none", padding: "1.5rem 1.25rem", marginBottom: "1.5rem" }}>
           <div style={{ fontSize: "0.92rem", fontWeight: 600, color: C.slate, marginBottom: "1rem" }}>Search Parameters</div>
@@ -196,6 +207,8 @@ export default function DARReport() {
             )}
           </>
         )}
+
+        </>)}
 
         <div style={{ marginTop: "1rem", fontSize: "0.72rem", color: C.muted, textAlign: "center" }}>
           Allied Universal Security Services · Washington University · Please keep all completed forms on file for audit purposes.
